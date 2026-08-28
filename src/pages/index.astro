@@ -1,0 +1,17 @@
+---
+import Base from '../layouts/Base.astro';
+import Hero from '../components/Hero.astro';
+import ProfileYaml from '../components/ProfileYaml.astro';
+import CareerPipeline from '../components/CareerPipeline.astro';
+import Projects from '../components/Projects.astro';
+import { getProfile } from '../lib/profile';
+
+const profile = getProfile();
+---
+
+<Base>
+  <Hero profile={profile} />
+  <ProfileYaml profile={profile} />
+  <CareerPipeline profile={profile} />
+  <Projects profile={profile} />
+</Base>

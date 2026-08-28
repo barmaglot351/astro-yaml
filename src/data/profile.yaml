@@ -1,0 +1,161 @@
+site:
+  handle: vasiliy-medved
+
+hero:
+  greeting: Привет, я
+  name: Vasiliy Medved
+  role: DevOps Engineer
+  cardName: vasiliy
+  cardRole: DevOps
+  cardReady: 1/1
+  cardStatus: Running
+  tagline: >-
+    Занимаюсь инфраструктурой и доставкой приложений, поддерживаю платформу и автоматизирую рутинные процессы.
+  stack:
+    - Linux
+    - Kubernetes
+    - Docker
+    - GitOps
+    - CI/CD
+
+engineer:
+  apiVersion: devops/v1
+  kind: Engineer
+  metadata:
+    name: Vasiliy Medved
+    role: DevOps Engineer
+    location: Russia (Remote)
+  spec:
+    status: Running
+    statusEmoji: "🟢"
+    experience: 3+ years
+    stack:
+      - Linux
+      - Kubernetes
+      - Docker
+      - GitOps
+      - CI/CD
+    focus:
+      - Infrastructure as Code
+      - Automation
+      - Cloud-Native
+
+about:
+  prompt: connect vasiliy-medved
+  title: 
+  text: >-
+    Открыт к интересным предложениям, консультациям и задачам по DevOps.
+
+contacts:
+  github:
+    label: GitHub
+    handle: "@mistermedved01"
+    url: https://github.com/mistermedved01
+  telegram:
+    label: Telegram
+    handle: "@medved_1101"
+    url: https://t.me/medved_1101
+  email:
+    label: Email
+    handle: mistermedved01@yandex.ru
+    url: mailto:mistermedved01@yandex.ru
+
+career:
+  workflowFile: career.yml
+  title: Career Pipeline
+  viewHistoryLabel: Run step:view_full_history
+  jobs:
+    - title: DevOps-инженер
+      company: platform integrator
+      period: Ноябрь 2025 — настоящее время
+      status: IN PROGRESS
+      highlights:
+        - "Alauda Container Platform: эксплуатация и сопровождение платформы"
+        - "Kubernetes: администрирование кластеров, деплой и сопровождение приложений"
+        - "CI/CD: разработка и поддержка пайплайнов в Jenkins и GitLab CI, автоматизация сборки и деплоя"
+        - "ArgoCD: деплой приложений в Kubernetes и автоматизация через GitOps"
+        - "Terraform: автоматизация развертывания инфраструктуры, ресурсов и VM"
+        - "PostgreSQL: сопровождение БД и настройка резервного копирования"
+        - "Harbor: управление образами и доступами"
+        - "Nexus: сопровождение artifact registry"
+        - "Vault: использование для хранения и управления секретами"
+      stack:
+        - Kubernetes
+        - GitLab CI
+        - ArgoCD
+        - Terraform
+    - title: DevOps-инженер
+      company: system integrator
+      period: Апрель 2025 — Октябрь 2025
+      status: COMPLETED
+      highlights:
+        - "Эксплуатация и сопровождение распределённой backend-архитектуры на Linux: Nginx, Tomcat, PostgreSQL, ElasticSearch, MongoDB"
+        - "Поддержка различных сред: prod — нативные сервисы, dev/stage — контейнеризация в Docker, Docker Swarm и Kubernetes"
+        - "Администрирование Linux-серверов, работа с высоконагруженными системами"
+        - "Docker: контейнеризация приложений, сборка образов, деплой через docker-compose, эксплуатация Docker Swarm"
+        - "Kubernetes: администрирование кластеров, деплой и сопровождение приложений"
+        - "CI/CD: разработка и поддержка пайплайнов в Jenkins и GitLab CI, автоматизация сборки и деплоя"
+        - "ArgoCD: деплой приложений в Kubernetes и автоматизация через GitOps"
+        - "Terraform: автоматизация развертывания ресурсов и VM"
+        - "Proxmox: эксплуатация и развитие виртуальной инфраструктуры, интеграция с Terraform"
+        - "Ansible: автоматизация конфигураций и деплоя приложений с использованием ролей"
+        - "PostgreSQL: сопровождение БД и настройка резервного копирования"
+        - "Zabbix: разработка шаблонов мониторинга, LLD-правил и триггеров"
+      stack:
+        - Kubernetes
+        - Jenkins
+        - Ansible
+        - Terraform
+    - title: Ведущий инженер-программист
+      company: industrial group
+      period: Февраль 2023 — Апрель 2025
+      status: COMPLETED
+      highlights:
+        - "Первичная интеграция ОС Astra Linux и ALD Pro в инфраструктуру организации"
+        - "Внедрение межсетевого экрана Ideco UTM, что повысило безопасность корпоративной сети"
+        - "Администрирование серверов на базе Windows, Linux"
+        - "Виртуализация: VMware vSphere, Hyper-V"
+        - "Автоматизация конфигурации инфраструктуры с помощью Ansible"
+        - "Развертывание приложений в Docker Swarm"
+        - "Управление ресурсами с помощью Terraform"
+        - "Администрирование Kaspersky Security Center и системы защиты информации Dallas Lock"
+        - "Поддержка и администрирование автоматизированных информационных систем организации"
+        - "Управление системой электронной очереди Queue Neuroniq"
+        - "Разработка и сопровождение скриптов на Bash и PowerShell для автоматизации задач"
+        - "Участие в выборе, приобретении и внедрении оборудования и ПО"
+        - "Составление технических заданий и проектной документации"
+        - "Оказание удалённой технической и программной поддержки пользователей, написание инструкций"
+      stack:
+        - Linux
+        - Ansible
+        - VMware
+        - Docker Swarm
+    - title: Инженер
+      company: telecom
+      period: Март 2019 — Январь 2023
+      status: COMPLETED
+      highlights:
+        - "Внедрение и сопровождение системы мониторинга сетевых и серверных устройств (PRTG Network Monitor)"
+        - "Приём, регистрация и обработка заявок пользователей, оперативное устранение IT-инцидентов"
+        - "Ведение технической документации, разработка пользовательских инструкций"
+        - "Администрирование IP-телефонии (Asterisk, Elastix)"
+        - "Администрирование сетевого оборудования (D-Link, Keenetic)"
+        - "Проектирование сетей"
+
+projects:
+  title: Пет-проекты
+  items:
+    - name: enter-to-devops
+      description: >-
+        Структурированные материалы для входа в DevOps: Linux, сети, Docker,
+        Ansible и Kubernetes — команды, конфиги и практические кейсы.
+      url: https://github.com/mistermedved01/enter-to-devops
+      stars: "52"
+      forks: "11"
+    - name: lab-home
+      description: >-
+        Домашняя платформа для экспериментов с Kubernetes: Terraform поднимает VM
+        в Proxmox, Ansible настраивает кластер, Argo CD разворачивает приложения.
+      url: https://github.com/mistermedved01/lab-home
+      stars: "10"
+      forks: "6"

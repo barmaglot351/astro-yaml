@@ -1,0 +1,100 @@
+---
+import type { Profile } from '../lib/types';
+
+interface Props {
+  profile: Profile;
+}
+
+const { profile } = Astro.props;
+const { career } = profile;
+---
+
+<section class="section" id="career">
+  <div class="section-head pipeline-head">
+    <div class="pipeline-head-title">
+      <svg class="pipeline-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path
+          fill="currentColor"
+          d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"></path>
+      </svg>
+      <h2 class="section-title">{career.title}</h2>
+    </div>
+    <span class="file-label">{career.workflowFile}</span>
+  </div>
+  <ol class="pipeline">
+    {
+      career.jobs.map((job, index) => {
+        const isActive = job.status === 'IN PROGRESS';
+        const isLast = index === career.jobs.length - 1;
+        return (
+          <li class="pipeline-item">
+            <div class="pipeline-track" aria-hidden="true">
+              <span class:list={['pipeline-node', isActive ? 'is-active' : 'is-done']}>
+                {
+                  isActive ? (
+                    <>
+                      <span class="pipeline-node-core"></span>
+                      <span class="pipeline-node-ring"></span>
+                    </>
+                  ) : (
+                    <svg class="pipeline-check" viewBox="0 0 12 12" focusable="false">
+                      <path d="M2.2 6.2 4.8 8.8 9.8 3.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                  )
+                }
+              </span>
+              {!isLast && <span class="pipeline-line"></span>}
+            </div>
+            {
+              isActive ? (
+                <article class="pipeline-card is-active">
+                  <div class="pipeline-top">
+                    <h3 class="pipeline-title">{job.title}</h3>
+                    <div class="pipeline-side">
+                      <p class="pipeline-period">{job.period}</p>
+                      <span class="pipeline-status is-active">{job.status}</span>
+                    </div>
+                  </div>
+                  <p class="pipeline-meta">@ {job.company}</p>
+                  <ul class="pipeline-highlights">
+                    {job.highlights.map((item) => (
+                      <li>{item}</li>
+                    ))}
+                  </ul>
+                </article>
+              ) : (
+                <article class="pipeline-card is-collapsible">
+                  <details class="pipeline-details">
+                    <summary class="pipeline-summary">
+                      <div class="pipeline-top">
+                        <h3 class="pipeline-title">
+                          <svg class="pipeline-chevron" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+                            <path d="M4.5 2.5 8.5 6 4.5 9.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>
+                          </svg>
+                          {job.title}
+                        </h3>
+                        <div class="pipeline-side">
+                          <p class="pipeline-period">{job.period}</p>
+                          <span class="pipeline-status is-done">{job.status}</span>
+                        </div>
+                      </div>
+                      <p class="pipeline-meta">@ {job.company}</p>
+                    </summary>
+                    <ul class="pipeline-highlights">
+                      {job.highlights.map((item) => (
+                        <li>{item}</li>
+                      ))}
+                    </ul>
+                  </details>
+                </article>
+              )
+            }
+          </li>
+        );
+      })
+    }
+  </ol>
+  <p class="pipeline-foot">
+    <code>{career.viewHistoryLabel}</code>
+  </p>
+</section>

@@ -1,0 +1,43 @@
+---
+import type { Profile } from '../lib/types';
+
+interface Props {
+  profile: Profile;
+}
+
+const { profile } = Astro.props;
+const { hero } = profile;
+---
+
+<section class="hero">
+  <div class="hero-copy">
+    <p class="hero-greeting">{hero.greeting}</p>
+    <h1 class="hero-name">{hero.name}</h1>
+    <h2 class="hero-role">{hero.role}</h2>
+    <p class="hero-tagline">{hero.tagline}</p>
+    <ul class="chips" aria-label="Стек">
+      {hero.stack.map((item) => <li>{item}</li>)}
+    </ul>
+  </div>
+  <div class="hero-card" aria-hidden="true">
+    <div class="hero-card-top">
+      <span class="dot red"></span>
+      <span class="dot amber"></span>
+      <span class="dot green"></span>
+      <span class="hero-card-title">~/profile</span>
+    </div>
+    <div class="hero-card-body">
+      <p class="hero-cmd">$ kubectl get engineer</p>
+      <div class="kubectl-grid">
+        <span>NAME</span>
+        <span>ROLE</span>
+        <span>READY</span>
+        <span>STATUS</span>
+        <span>{hero.cardName}</span>
+        <span>{hero.cardRole}</span>
+        <span>{hero.cardReady}</span>
+        <span>{hero.cardStatus}</span>
+      </div>
+    </div>
+  </div>
+</section>
