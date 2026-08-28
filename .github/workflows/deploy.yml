@@ -32,12 +32,21 @@ jobs:
         run: |
           REPO="${{ github.event.repository.name }}"
           OWNER="${{ github.repository_owner }}"
-          if [ "$REPO" = "${OWNER}.github.io" ]; then
+          CUSTOM_DOMAIN="${{ vars.CUSTOM_DOMAIN }}"
+          if [ -z "$CUSTOM_DOMAIN" ] && [ -f public/CNAME ]; then
+            CUSTOM_DOMAIN="$(tr -d '[:space:]' < public/CNAME)"
+          fi
+          if [ -n "$CUSTOM_DOMAIN" ]; then
             echo "base=/" >> "$GITHUB_OUTPUT"
+            echo "site=https://${CUSTOM_DOMAIN}" >> "$GITHUB_OUTPUT"
+          elif [ "$REPO" = "${OWNER}.github.io" ]; then
+            echo "base=/" >> "$GITHUB_OUTPUT"
+            echo "site=https://${OWNER}.github.io" >> "$GITHUB_OUTPUT"
           else
             echo "base=/${REPO}" >> "$GITHUB_OUTPUT"
+            echo "site=https://${OWNER}.github.io" >> "$GITHUB_OUTPUT"
           fi
-          echo "site=https://${OWNER}.github.io" >> "$GITHUB_OUTPUT"
+          echo "Resolved base=$(grep '^base=' "$GITHUB_OUTPUT" | cut -d= -f2-) site=$(grep '^site=' "$GITHUB_OUTPUT" | cut -d= -f2-)"
 
       - name: Install
         run: npm ci
