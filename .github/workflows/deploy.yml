@@ -33,9 +33,6 @@ jobs:
           REPO="${{ github.event.repository.name }}"
           OWNER="${{ github.repository_owner }}"
           CUSTOM_DOMAIN="${{ vars.CUSTOM_DOMAIN }}"
-          if [ -z "$CUSTOM_DOMAIN" ] && [ -f public/CNAME ]; then
-            CUSTOM_DOMAIN="$(tr -d '[:space:]' < public/CNAME)"
-          fi
           if [ -n "$CUSTOM_DOMAIN" ]; then
             echo "base=/" >> "$GITHUB_OUTPUT"
             echo "site=https://${CUSTOM_DOMAIN}" >> "$GITHUB_OUTPUT"
