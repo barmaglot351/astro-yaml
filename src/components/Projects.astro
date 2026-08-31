@@ -1,46 +1,4 @@
----
-import type { Profile } from '../lib/types';
-
-interface Props {
-  profile: Profile;
-}
-
-const { profile } = Astro.props;
-const { projects } = profile;
----
-
-<section class="section" id="projects">
-  <h2 class="section-title">{projects.title}</h2>
-  <ul class="project-grid">
-    {
-      projects.items.map((item) => (
-        <li class="project-card">
-          <h3 class="project-name">
-            <a href={item.url} rel="noreferrer">{item.name}</a>
-          </h3>
-          <p class="project-desc">{item.description}</p>
-          <p class="project-meta">
-            <span class="project-stat">
-              <svg class="project-stat-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-                <path
-                  fill="currentColor"
-                  d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25z"
-                ></path>
-              </svg>
-              {item.stars}
-            </span>
-            <span class="project-stat">
-              <svg class="project-stat-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-                <path
-                  fill="currentColor"
-                  d="M5 5.372v.878c0 .414.336.75.75.75h4.502a1.75 1.75 0 0 1 1.732 1.5H14a1 1 0 0 1 1 1v2.528a1 1 0 0 1-.434.832l-6 4.095a1 1 0 0 1-1.132 0l-6-4.095A1 1 0 0 1 2 11.528V9.622a1 1 0 0 1 1-1h1.986A1.75 1.75 0 0 1 6.718 7.25h4.502a.75.75 0 0 0 .75-.75v-.878a2.25 2.25 0 1 0-1.5 0ZM3.872 3.5A2.752 2.752 0 0 1 7.5 1.027v1.016a.75.75 0 0 0 .75.75h4.502a2.25 2.25 0 0 1 2.122 1.5H14a2.5 2.5 0 0 1 2.5 2.5v2.528a2.5 2.5 0 0 1-1.087 2.079l-6 4.095a2.5 2.5 0 0 1-2.828 0l-6-4.095A2.5 2.5 0 0 1 2 11.528V9.122a2.5 2.5 0 0 1 2.5-2.5h1.986c.136-.508.428-.965.852-1.272Z"
-                ></path>
-              </svg>
-              {item.forks}
-            </span>
-          </p>
-        </li>
-      ))
-    }
-  </ul>
+<section class="section">
+  <h2 class="section-title">Проекты</h2>
+  <p class="about-text">Здесь могла быть ваша реклама. Но программист ушёл делать что-то поважнее.</p>
 </section>
