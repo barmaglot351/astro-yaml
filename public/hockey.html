@@ -7,7 +7,12 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    background: #1a1a2e;
+    background-color: #071b3d;
+    background-image: url('fon.png');
+    background-position: center top;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
     font-family: 'Segoe UI', sans-serif;
     display: flex;
     flex-direction: column;
@@ -45,7 +50,7 @@
   .controls button[data-layer="benchesLayer"].active { background: #87532c; border-color: #e0a063; }
   .controls button[data-layer="standsLayer"].active { background: #f4a261; border-color: #f4a261; }
   .board-container {
-    background: #0d0d1a;
+    background: transparent;
     padding: 15px;
     border-radius: 20px;
     box-shadow: 0 20px 60px rgba(0,0,0,0.5);
@@ -64,9 +69,10 @@
   .team-panel {
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
+    align-self: center;
     gap: 8px;
-    padding: 14px 10px;
+    padding: 12px 10px;
     border: 1px solid #415269;
     border-radius: 16px;
     background: #101b2b;
@@ -113,7 +119,7 @@
     display: block;
     width: 100%;
     height: auto;
-    background: #fff;
+    background: transparent;
     border-radius: 10px;
   }
   .layer { }
@@ -269,8 +275,8 @@
       </clipPath>
     </defs>
 
-    <rect x="-90" y="-90" width="1380" height="880" rx="24" fill="#38291d"/>
-    <rect x="-79" y="-79" width="1358" height="858" rx="18" fill="#080d19"/>
+    <rect x="-90" y="-90" width="1380" height="880" rx="24" fill="none"/>
+    <rect x="-79" y="-79" width="1358" height="858" rx="18" fill="none"/>
     <g id="standsLayer" aria-label="Трибуны со зрителями" pointer-events="none">
       <rect x="-24" y="-24" width="1248" height="748" rx="234"
             fill="none" stroke="#404457" stroke-width="106"/>
