@@ -84,7 +84,7 @@
   .game-container {
     position: relative;
     border-radius: 18px;
-    padding: 12px;
+    padding: 18px;
     background: linear-gradient(135deg, #3a2818, #1a1008);
     box-shadow: 0 20px 60px rgba(0,0,0,0.7);
   }
@@ -170,7 +170,7 @@
   .info b { color: #4fc3f7; }
   .overlay {
     position: absolute;
-    inset: 12px;
+    inset: 18px;
     border-radius: 10px;
     background: rgba(0,0,0,0.75);
     display: none;
@@ -216,7 +216,7 @@
 </div>
 
 <div class="game-container">
-  <canvas id="game" width="1200" height="760"></canvas>
+  <canvas id="game" width="1280" height="760"></canvas>
   <div class="overlay" id="overlay">
     <h2 id="overlayText">ГОЛ!</h2>
     <button id="continueBtn">ПРОДОЛЖИТЬ</button>
@@ -252,7 +252,7 @@ const ctx = canvas.getContext('2d');
 const CANVAS_W = canvas.width;
 const CANVAS_H = canvas.height;
 
-const FIELD_X = 50;
+const FIELD_X = 90;
 const FIELD_Y = 80;
 const FIELD_W = 1100;
 const FIELD_H = 600;
