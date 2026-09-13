@@ -34,25 +34,27 @@
   }
   .subtitle { font-size: 0.85rem; color: #888; margin-bottom: 10px; letter-spacing: 2px; }
   .challenge-panel {
-    width: min(440px, 90vw);
-    min-height: 30px;
-    margin: 0 auto 6px;
-    padding: 3px 10px;
-    border: 1px solid rgba(255,235,59,0.7);
-    border-radius: 5px;
-    background: rgba(255,255,255,0.06);
+    width: min(540px, 92vw);
+    min-height: 48px;
+    margin: 0 auto 10px;
+    padding: 8px 18px;
+    border: 1px solid rgba(90, 205, 255, 0.9);
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(5, 35, 77, 0.9), rgba(7, 89, 157, 0.7));
+    box-shadow: 0 0 22px rgba(29, 169, 255, 0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+    backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 18px;
     text-align: center;
   }
-  .challenge-title { color: #ffeb3b; font-size: .68rem; letter-spacing: 1.5px; font-weight: 800; white-space: nowrap; }
-  .challenge-content { display: flex; align-items: center; justify-content: center; gap: 12px; }
-  .challenge-timer { min-width: 82px; padding: 0 12px; border-left: 1px solid rgba(255,235,59,0.45); border-right: 1px solid rgba(255,235,59,0.45); }
-  .challenge-timer-value { color: #ffeb3b; font-size: 1rem; font-variant-numeric: tabular-nums; line-height: 1; }
-  .challenge-stats { display: flex; justify-content: space-around; gap: 12px; font-size: .68rem; color: #bbb; white-space: nowrap; }
-  .challenge-stats b { display: inline; color: #fff; font-size: .85rem; margin-left: 3px; }
+  .challenge-title { color: #fff; font-size: .78rem; letter-spacing: 2px; font-weight: 900; white-space: nowrap; text-shadow: 0 0 10px rgba(255,235,59,0.65); }
+  .challenge-content { display: flex; align-items: center; justify-content: center; gap: 16px; }
+  .challenge-timer { min-width: 112px; padding: 4px 16px; border-left: 1px solid rgba(127, 219, 255, 0.55); border-right: 1px solid rgba(127, 219, 255, 0.55); }
+  .challenge-timer-value { color: #fff; font-size: 1.18rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; text-shadow: 0 0 12px rgba(79,195,247,0.9); }
+  .challenge-stats { display: flex; justify-content: space-around; gap: 16px; font-size: .73rem; color: #a9dfff; letter-spacing: .35px; white-space: nowrap; }
+  .challenge-stats b { display: inline; color: #fff; font-size: 1rem; margin-left: 4px; text-shadow: 0 0 8px rgba(255,255,255,0.55); }
   .challenge-achievement {
     display: none;
     padding-left: 12px;
@@ -62,7 +64,7 @@
     font-weight: 800;
     white-space: nowrap;
   }
-  .challenge-panel.has-achievement { width: min(650px, 90vw); }
+  .challenge-panel.has-achievement { width: min(740px, 92vw); }
   .challenge-achievement.unlocked { display: block; animation: achievementPop .45s ease-out; }
   @keyframes achievementPop {
     0% { transform: scale(.65); opacity: 0; }
