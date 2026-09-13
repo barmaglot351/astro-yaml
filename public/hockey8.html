@@ -2310,6 +2310,89 @@ function drawStands() {
   });
 }
 
+function drawArenaSpotlights() {
+  const cycleDuration = 10000;
+  const activeDuration = 4000;
+  const cycleTime = performance.now() % cycleDuration;
+  if (cycleTime >= activeDuration) return;
+
+  const rawProgress = cycleTime / activeDuration;
+  const progress = (1 - Math.cos(rawProgress * Math.PI)) / 2;
+  const fade = Math.min(1, cycleTime / 650, (activeDuration - cycleTime) / 650);
+  const outerMargin = 5;
+  const outerX = FIELD_X - STAND_WIDTH - outerMargin;
+  const outerY = FIELD_Y - STAND_WIDTH - outerMargin;
+  const outerW = FIELD_W + 2 * (STAND_WIDTH + outerMargin);
+  const outerH = FIELD_H + 2 * (STAND_WIDTH + outerMargin);
+  const outerR = CORNER_R + STAND_WIDTH + outerMargin;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(outerX + outerR, outerY);
+  ctx.lineTo(outerX + outerW - outerR, outerY);
+  ctx.arcTo(outerX + outerW, outerY, outerX + outerW, outerY + outerR, outerR);
+  ctx.lineTo(outerX + outerW, outerY + outerH - outerR);
+  ctx.arcTo(outerX + outerW, outerY + outerH, outerX + outerW - outerR, outerY + outerH, outerR);
+  ctx.lineTo(outerX + outerR, outerY + outerH);
+  ctx.arcTo(outerX, outerY + outerH, outerX, outerY + outerH - outerR, outerR);
+  ctx.lineTo(outerX, outerY + outerR);
+  ctx.arcTo(outerX, outerY, outerX + outerR, outerY, outerR);
+  ctx.closePath();
+
+  ctx.moveTo(FIELD_X + CORNER_R, FIELD_Y);
+  ctx.lineTo(FIELD_X + FIELD_W - CORNER_R, FIELD_Y);
+  ctx.arcTo(FIELD_X + FIELD_W, FIELD_Y, FIELD_X + FIELD_W, FIELD_Y + CORNER_R, CORNER_R);
+  ctx.lineTo(FIELD_X + FIELD_W, FIELD_Y + FIELD_H - CORNER_R);
+  ctx.arcTo(FIELD_X + FIELD_W, FIELD_Y + FIELD_H, FIELD_X + FIELD_W - CORNER_R, FIELD_Y + FIELD_H, CORNER_R);
+  ctx.lineTo(FIELD_X + CORNER_R, FIELD_Y + FIELD_H);
+  ctx.arcTo(FIELD_X, FIELD_Y + FIELD_H, FIELD_X, FIELD_Y + FIELD_H - CORNER_R, CORNER_R);
+  ctx.lineTo(FIELD_X, FIELD_Y + CORNER_R);
+  ctx.arcTo(FIELD_X, FIELD_Y, FIELD_X + CORNER_R, FIELD_Y, CORNER_R);
+  ctx.closePath();
+  ctx.clip('evenodd');
+
+  ctx.globalCompositeOperation = 'screen';
+  const sweepWidth = outerW + 320;
+  const spotlights = [
+    {
+      x: outerX - 160 + sweepWidth * progress,
+      y: outerY + 32 + Math.sin(rawProgress * Math.PI) * 18,
+      sourceX: outerX + 90,
+      sourceY: outerY - 150
+    },
+    {
+      x: outerX + outerW + 160 - sweepWidth * progress,
+      y: outerY + outerH - 32 - Math.sin(rawProgress * Math.PI) * 18,
+      sourceX: outerX + outerW - 90,
+      sourceY: outerY - 150
+    }
+  ];
+
+  for (const light of spotlights) {
+    const beamGradient = ctx.createLinearGradient(light.sourceX, light.sourceY, light.x, light.y);
+    beamGradient.addColorStop(0, `rgba(210, 238, 255, ${0.18 * fade})`);
+    beamGradient.addColorStop(0.65, `rgba(130, 205, 255, ${0.1 * fade})`);
+    beamGradient.addColorStop(1, 'rgba(110, 195, 255, 0)');
+    ctx.fillStyle = beamGradient;
+    ctx.beginPath();
+    ctx.moveTo(light.sourceX - 10, light.sourceY);
+    ctx.lineTo(light.sourceX + 10, light.sourceY);
+    ctx.lineTo(light.x + 105, light.y);
+    ctx.lineTo(light.x - 105, light.y);
+    ctx.closePath();
+    ctx.fill();
+
+    const glow = ctx.createRadialGradient(light.x, light.y, 0, light.x, light.y, 145);
+    glow.addColorStop(0, `rgba(220, 245, 255, ${0.28 * fade})`);
+    glow.addColorStop(0.42, `rgba(125, 205, 255, ${0.13 * fade})`);
+    glow.addColorStop(1, 'rgba(80, 170, 255, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(light.x - 145, light.y - 145, 290, 290);
+  }
+
+  ctx.restore();
+}
+
 function drawSpectators() {
   const time = frameCount * 0.05;
   const jumping = crowdJumpTime > 0;
@@ -2416,6 +2499,7 @@ function gameLoop() {
   
   drawStands();
   drawSpectators();
+  drawArenaSpotlights();
   drawBanners();
   drawScoreboardOnCanvas();
   drawField();
