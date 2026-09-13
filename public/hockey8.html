@@ -7,7 +7,12 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: 'Segoe UI', Tahoma, sans-serif;
-    background: radial-gradient(ellipse at center, #0d1b2a 0%, #000 100%);
+    background-color: #031735;
+    background-image: url('./hockey-background.png');
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -2329,8 +2334,7 @@ function gameLoop() {
     if (crowdJumpTime > 0) crowdJumpTime--;
   }
   
-  ctx.fillStyle = '#0a0a15';
-  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
   
   drawStands();
   drawSpectators();
