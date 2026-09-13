@@ -1,0 +1,2207 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Hockey</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: radial-gradient(ellipse at center, #0d1b2a 0%, #000 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    overflow: hidden;
+    user-select: none;
+    padding: 10px;
+  }
+  h1 {
+    font-size: 2rem;
+    margin-bottom: 6px;
+    background: linear-gradient(90deg, #4fc3f7, #ff5252);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 4px;
+    font-weight: 900;
+  }
+  .subtitle { font-size: 0.85rem; color: #888; margin-bottom: 10px; letter-spacing: 2px; }
+  .scoreboard { display: flex; gap: 30px; margin-bottom: 10px; font-size: 1.4rem; font-weight: bold; }
+  .score {
+    height: 44px;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.05);
+    border: 2px solid;
+    transition: box-shadow 0.3s, background-color 0.3s;
+  }
+  .score.blue { width: 120px; border-color: #4fc3f7; color: #4fc3f7; box-shadow: 0 0 20px rgba(79,195,247,0.3); }
+  .score.red { width: 220px; border-color: #ff5252; color: #ff5252; box-shadow: 0 0 20px rgba(255,82,82,0.3); }
+  .score.flash { background: rgba(255,255,255,0.14); box-shadow: 0 0 30px currentColor; }
+  .game-container {
+    position: relative;
+    border-radius: 18px;
+    padding: 12px;
+    background: linear-gradient(135deg, #3a2818, #1a1008);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+  }
+  canvas { display: block; border-radius: 10px; }
+  .controls { margin-top: 12px; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; align-items: center; }
+  button {
+    padding: 9px 18px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #fff;
+    background: linear-gradient(135deg, #4fc3f7, #1976d2);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+  button:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(79,195,247,0.4); }
+  
+  .slider-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,255,255,0.05);
+    padding: 8px 15px;
+    border-radius: 8px;
+    border: 2px solid #4fc3f7;
+  }
+  
+  .slider-label {
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #4fc3f7;
+    white-space: nowrap;
+  }
+  
+  input[type="range"] {
+    width: 180px;
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(to right, #4fc3f7 0%, #ff5252 100%);
+    outline: none;
+    -webkit-appearance: none;
+  }
+  
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  }
+  
+  input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  }
+  
+  .slider-value {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #ffeb3b;
+    min-width: 40px;
+    text-align: center;
+  }
+  
+  .info {
+    margin-top: 12px;
+    font-size: 0.85rem;
+    color: #bbb;
+    text-align: center;
+    line-height: 1.8;
+    max-width: 1200px;
+  }
+  .info b { color: #4fc3f7; }
+  .overlay {
+    position: absolute;
+    inset: 12px;
+    border-radius: 10px;
+    background: rgba(0,0,0,0.75);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    z-index: 10;
+    backdrop-filter: blur(6px);
+  }
+  .overlay.show { display: flex; }
+  .overlay h2 {
+    font-size: 3rem;
+    margin-bottom: 20px;
+    background: linear-gradient(90deg, #4fc3f7, #ff5252);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 900;
+    letter-spacing: 6px;
+  }
+</style>
+</head>
+<body>
+
+<h1>🏒 HOCKEY </h1>
+<div class="subtitle">НАСТРОЙКА ИИ</div>
+
+<div class="scoreboard">
+  <div class="score blue" id="score1">ВЫ: 0</div>
+  <div class="score red" id="score2">КОМПЬЮТЕР: 0</div>
+</div>
+
+<div class="game-container">
+  <canvas id="game" width="1200" height="760"></canvas>
+  <div class="overlay" id="overlay">
+    <h2 id="overlayText">ГОЛ!</h2>
+    <button id="continueBtn">ПРОДОЛЖИТЬ</button>
+  </div>
+</div>
+
+<div class="controls">
+  <button id="resetBtn">🔄 СБРОС СЧЁТА</button>
+  <button id="toggleHudBtn" type="button" aria-pressed="true">👁 ПОКАЗАТЬ ПАНЕЛИ</button>
+  
+  <div class="slider-container">
+    <span class="slider-label">🎯 СЛОЖНОСТЬ</span>
+    <input type="range" id="aiDifficultySlider" min="0" max="100" value="50">
+    <span class="slider-value" id="aiDifficultyValue">50</span>
+  </div>
+  
+  <div class="slider-container">
+    <span class="slider-label">⚡ СКОРОСТЬ</span>
+    <input type="range" id="aiSpeedSlider" min="0" max="100" value="50">
+    <span class="slider-value" id="aiSpeedValue">50</span>
+  </div>
+</div>
+
+<div class="info">
+  <b>W A S D</b> — движение &nbsp;|&nbsp;
+  <b>Q / E</b> — вращение клюшки<br>
+  Сложность: стиль игры ИИ. Скорость: как быстро двигается ИИ
+</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const CANVAS_W = canvas.width;
+const CANVAS_H = canvas.height;
+
+const FIELD_X = 50;
+const FIELD_Y = 80;
+const FIELD_W = 1100;
+const FIELD_H = 600;
+const CORNER_R = 90;
+
+const PUCK_R = 10;
+const PLAYER_R = 26;
+const STICK_LEN = 38;
+const STICK_R = 6;
+
+const GOAL_LINE_OFFSET = 90;
+const GOAL_H = 110;
+const GOAL_DEPTH = 25;
+const CREASE_RADIUS = 75;
+const POST_THICKNESS = 8;
+
+const FRICTION = 0.988;
+const MAX_PUCK_SPEED = 18;
+const PLAYER_SPEED = 4; // Скорость игрока (не меняется)
+const ROTATE_SPEED = 0.09;
+const LEAD_DISTANCE = 50;
+
+let score1 = 0, score2 = 0;
+let paused = false;
+let hudVisible = false;
+let goalFlash = 0;
+let goalScorer = 0;
+let crowdJumpTime = 0;
+let stealFlash = 0;
+let stealText = '';
+let stealX = 0, stealY = 0;
+
+// Настройки ИИ
+let aiDifficulty = 50; // 0-100
+let aiSpeed = 50; // 0-100
+
+const puck = { x: FIELD_W/2, y: FIELD_H/2, vx: 0, vy: 0, r: PUCK_R, trail: [] };
+
+const player = {
+  x: 200, y: FIELD_H/2, vx: 0, vy: 0, r: PLAYER_R,
+  angle: 0, rotationSpeed: 0, team: 'blue',
+  stealCooldown: 0, lastX: 200, lastY: FIELD_H/2
+};
+
+const cpu = {
+  x: FIELD_W - 200, y: FIELD_H/2, vx: 0, vy: 0, r: PLAYER_R,
+  angle: Math.PI, rotationSpeed: 0, team: 'red',
+  state: 'DEFEND',
+  stateTimer: 0,
+  stuckCounter: 0,
+  lastX: 0, lastY: 0,
+  attackSide: 1,
+  tactic: 'STRAIGHT',
+  tacticTimer: 0,
+  tacticDuration: 0,
+  shootCooldown: 0,
+  zigzagPhase: 0,
+  feintDirection: 1,
+  hasShot: false,
+  ownGoalAttempts: 0,
+  stealCooldown: 0
+};
+
+const TACTICS = ['STRAIGHT', 'FLANK', 'ZIGZAG', 'SNIPER', 'FEINT'];
+const TACTIC_NAMES = {
+  'STRAIGHT': ' ПРЯМАЯ',
+  'FLANK': '🔄 ОБХОД',
+  'ZIGZAG': '〰️ ЗИГЗАГ',
+  'SNIPER': ' СНАЙПЕР',
+  'FEINT': '🎭 ФИНТ'
+};
+
+const SHIRT_COLORS = [
+  '#e53935', '#1e88e5', '#fdd835', '#43a047', '#8e24aa',
+  '#fb8c00', '#00acc1', '#d81b60', '#5e35b1', '#00897b',
+  '#f4511e', '#3949ab', '#c0ca33', '#6d4c41', '#546e7a',
+  '#ffffff', '#212121', '#ec407a'
+];
+const SKIN_COLORS = ['#ffdbac', '#f1c27d', '#e0ac69', '#c68642', '#8d5524', '#ffcd94'];
+
+const spectators = [];
+const STAND_ROWS = 5;
+const ROW_HEIGHT = 14;
+const STAND_WIDTH = 70;
+
+// Ползунки
+const aiDifficultySlider = document.getElementById('aiDifficultySlider');
+const aiDifficultyValue = document.getElementById('aiDifficultyValue');
+const aiSpeedSlider = document.getElementById('aiSpeedSlider');
+const aiSpeedValue = document.getElementById('aiSpeedValue');
+
+aiDifficultySlider.addEventListener('input', (e) => {
+  aiDifficulty = parseInt(e.target.value);
+  aiDifficultyValue.textContent = aiDifficulty;
+});
+
+aiSpeedSlider.addEventListener('input', (e) => {
+  aiSpeed = parseInt(e.target.value);
+  aiSpeedValue.textContent = aiSpeed;
+});
+
+function getCPUSpeed() {
+  // aiSpeed: 0 = медленно (2), 100 = быстро (6)
+  return 2 + (aiSpeed / 100) * 4;
+}
+
+function getCPURotateSpeed() {
+  // aiSpeed влияет на скорость вращения клюшки
+  return 0.04 + (aiSpeed / 100) * 0.06;
+}
+
+function getGoalGeometry() {
+  const goalTop = (FIELD_H - GOAL_H) / 2;
+  const goalBottom = (FIELD_H + GOAL_H) / 2;
+  const goalCenterY = FIELD_H / 2;
+  
+  return {
+    left: {
+      goalLine: GOAL_LINE_OFFSET,
+      goalRect: {
+        x1: GOAL_LINE_OFFSET - GOAL_DEPTH,
+        x2: GOAL_LINE_OFFSET,
+        y1: goalTop,
+        y2: goalBottom
+      },
+      crease: {
+        cx: GOAL_LINE_OFFSET,
+        cy: goalCenterY,
+        r: CREASE_RADIUS,
+        side: 'right'
+      },
+      posts: [
+        { x: GOAL_LINE_OFFSET, y: goalTop },
+        { x: GOAL_LINE_OFFSET, y: goalBottom }
+      ]
+    },
+    right: {
+      goalLine: FIELD_W - GOAL_LINE_OFFSET,
+      goalRect: {
+        x1: FIELD_W - GOAL_LINE_OFFSET,
+        x2: FIELD_W - GOAL_LINE_OFFSET + GOAL_DEPTH,
+        y1: goalTop,
+        y2: goalBottom
+      },
+      crease: {
+        cx: FIELD_W - GOAL_LINE_OFFSET,
+        cy: goalCenterY,
+        r: CREASE_RADIUS,
+        side: 'left'
+      },
+      posts: [
+        { x: FIELD_W - GOAL_LINE_OFFSET, y: goalTop },
+        { x: FIELD_W - GOAL_LINE_OFFSET, y: goalBottom }
+      ]
+    },
+    top: goalTop,
+    bottom: goalBottom,
+    centerY: goalCenterY
+  };
+}
+
+function isInGoalRect(x, y, side) {
+  const g = getGoalGeometry();
+  const goal = side === 'left' ? g.left : g.right;
+  return x >= goal.goalRect.x1 && x <= goal.goalRect.x2 && y >= goal.goalRect.y1 && y <= goal.goalRect.y2;
+}
+
+function isInCrease(x, y, side) {
+  const g = getGoalGeometry();
+  const crease = side === 'left' ? g.left.crease : g.right.crease;
+  const dx = x - crease.cx;
+  const dy = y - crease.cy;
+  const dist = Math.hypot(dx, dy);
+  if (dist > crease.r) return false;
+  if (side === 'left' && x < crease.cx) return false;
+  if (side === 'right' && x > crease.cx) return false;
+  return true;
+}
+
+function createSpectators() {
+  spectators.length = 0;
+  
+  const corners = [
+    { cx: FIELD_X + CORNER_R, cy: FIELD_Y + CORNER_R, angleStart: Math.PI, angleEnd: 1.5 * Math.PI },
+    { cx: FIELD_X + FIELD_W - CORNER_R, cy: FIELD_Y + CORNER_R, angleStart: 1.5 * Math.PI, angleEnd: 2 * Math.PI },
+    { cx: FIELD_X + CORNER_R, cy: FIELD_Y + FIELD_H - CORNER_R, angleStart: 0.5 * Math.PI, angleEnd: Math.PI },
+    { cx: FIELD_X + FIELD_W - CORNER_R, cy: FIELD_Y + FIELD_H - CORNER_R, angleStart: 0, angleEnd: 0.5 * Math.PI }
+  ];
+  
+  const topStraightStart = FIELD_X + CORNER_R;
+  const topStraightEnd = FIELD_X + FIELD_W - CORNER_R;
+  const topStraightWidth = topStraightEnd - topStraightStart;
+  
+  for (let row = 0; row < STAND_ROWS; row++) {
+    const y = FIELD_Y - 10 - row * ROW_HEIGHT;
+    const count = Math.floor(topStraightWidth / 10);
+    const spacing = topStraightWidth / count;
+    for (let i = 0; i < count; i++) {
+      const x = topStraightStart + i * spacing + spacing / 2 + (Math.random() - 0.5) * 2;
+      spectators.push({ x, y, baseY: y, zone: 'top-straight', shirt: SHIRT_COLORS[Math.floor(Math.random() * SHIRT_COLORS.length)], skin: SKIN_COLORS[Math.floor(Math.random() * SKIN_COLORS.length)], phase: Math.random() * Math.PI * 2, size: 0.85 + Math.random() * 0.3 });
+    }
+  }
+  
+  corners.slice(0, 2).forEach((corner, idx) => {
+    for (let row = 0; row < STAND_ROWS; row++) {
+      const radius = CORNER_R + 10 + row * ROW_HEIGHT;
+      const angleRange = corner.angleEnd - corner.angleStart;
+      const count = Math.floor(radius * angleRange / 10);
+      for (let i = 0; i < count; i++) {
+        const angle = corner.angleStart + (i / count) * angleRange + (Math.random() - 0.5) * 0.05;
+        const x = corner.cx + Math.cos(angle) * radius + (Math.random() - 0.5) * 2;
+        const y = corner.cy + Math.sin(angle) * radius + (Math.random() - 0.5) * 2;
+        spectators.push({ x, y, baseY: y, zone: idx === 0 ? 'top-left-curve' : 'top-right-curve', shirt: SHIRT_COLORS[Math.floor(Math.random() * SHIRT_COLORS.length)], skin: SKIN_COLORS[Math.floor(Math.random() * SKIN_COLORS.length)], phase: Math.random() * Math.PI * 2, size: 0.85 + Math.random() * 0.3 });
+      }
+    }
+  });
+  
+  const bottomStraightStart = FIELD_X + CORNER_R;
+  const bottomStraightEnd = FIELD_X + FIELD_W - CORNER_R;
+  const bottomStraightWidth = bottomStraightEnd - bottomStraightStart;
+  
+  for (let row = 0; row < STAND_ROWS; row++) {
+    const y = FIELD_Y + FIELD_H + 10 + row * ROW_HEIGHT;
+    const count = Math.floor(bottomStraightWidth / 10);
+    const spacing = bottomStraightWidth / count;
+    for (let i = 0; i < count; i++) {
+      const x = bottomStraightStart + i * spacing + spacing / 2 + (Math.random() - 0.5) * 2;
+      spectators.push({ x, y, baseY: y, zone: 'bottom-straight', shirt: SHIRT_COLORS[Math.floor(Math.random() * SHIRT_COLORS.length)], skin: SKIN_COLORS[Math.floor(Math.random() * SKIN_COLORS.length)], phase: Math.random() * Math.PI * 2, size: 0.85 + Math.random() * 0.3 });
+    }
+  }
+  
+  corners.slice(2, 4).forEach((corner, idx) => {
+    for (let row = 0; row < STAND_ROWS; row++) {
+      const radius = CORNER_R + 10 + row * ROW_HEIGHT;
+      const angleRange = corner.angleEnd - corner.angleStart;
+      const count = Math.floor(radius * angleRange / 10);
+      for (let i = 0; i < count; i++) {
+        const angle = corner.angleStart + (i / count) * angleRange + (Math.random() - 0.5) * 0.05;
+        const x = corner.cx + Math.cos(angle) * radius + (Math.random() - 0.5) * 2;
+        const y = corner.cy + Math.sin(angle) * radius + (Math.random() - 0.5) * 2;
+        spectators.push({ x, y, baseY: y, zone: idx === 0 ? 'bottom-left-curve' : 'bottom-right-curve', shirt: SHIRT_COLORS[Math.floor(Math.random() * SHIRT_COLORS.length)], skin: SKIN_COLORS[Math.floor(Math.random() * SKIN_COLORS.length)], phase: Math.random() * Math.PI * 2, size: 0.85 + Math.random() * 0.3 });
+      }
+    }
+  });
+  
+  const leftStraightStart = FIELD_Y + CORNER_R;
+  const leftStraightEnd = FIELD_Y + FIELD_H - CORNER_R;
+  const leftStraightHeight = leftStraightEnd - leftStraightStart;
+  
+  for (let row = 0; row < STAND_ROWS; row++) {
+    const x = FIELD_X - 10 - row * ROW_HEIGHT;
+    const count = Math.floor(leftStraightHeight / 10);
+    const spacing = leftStraightHeight / count;
+    for (let i = 0; i < count; i++) {
+      const y = leftStraightStart + i * spacing + spacing / 2 + (Math.random() - 0.5) * 2;
+      spectators.push({ x, y, baseY: y, zone: 'left-straight', shirt: SHIRT_COLORS[Math.floor(Math.random() * SHIRT_COLORS.length)], skin: SKIN_COLORS[Math.floor(Math.random() * SKIN_COLORS.length)], phase: Math.random() * Math.PI * 2, size: 0.85 + Math.random() * 0.3, isBehindGoal: true });
+    }
+  }
+  
+  const rightStraightStart = FIELD_Y + CORNER_R;
+  const rightStraightEnd = FIELD_Y + FIELD_H - CORNER_R;
+  const rightStraightHeight = rightStraightEnd - rightStraightStart;
+  
+  for (let row = 0; row < STAND_ROWS; row++) {
+    const x = FIELD_X + FIELD_W + 10 + row * ROW_HEIGHT;
+    const count = Math.floor(rightStraightHeight / 10);
+    const spacing = rightStraightHeight / count;
+    for (let i = 0; i < count; i++) {
+      const y = rightStraightStart + i * spacing + spacing / 2 + (Math.random() - 0.5) * 2;
+      spectators.push({ x, y, baseY: y, zone: 'right-straight', shirt: SHIRT_COLORS[Math.floor(Math.random() * SHIRT_COLORS.length)], skin: SKIN_COLORS[Math.floor(Math.random() * SKIN_COLORS.length)], phase: Math.random() * Math.PI * 2, size: 0.85 + Math.random() * 0.3, isBehindGoal: true });
+    }
+  }
+}
+
+createSpectators();
+
+function getStickTip(p) {
+  return { x: p.x + Math.cos(p.angle) * STICK_LEN, y: p.y + Math.sin(p.angle) * STICK_LEN };
+}
+
+const keys = {};
+window.addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  keys[k] = true;
+  if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
+});
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+function resetPositions() {
+  puck.x = FIELD_W/2; puck.y = FIELD_H/2;
+  puck.vx = 0; puck.vy = 0;
+  puck.trail = [];
+  
+  player.x = 200; player.y = FIELD_H/2;
+  player.lastX = 200; player.lastY = FIELD_H/2;
+  player.angle = 0;
+  player.rotationSpeed = 0;
+  player.stealCooldown = 0;
+  
+  cpu.x = FIELD_W - 200; cpu.y = FIELD_H/2;
+  cpu.lastX = FIELD_W - 200; cpu.lastY = FIELD_H/2;
+  cpu.angle = Math.PI;
+  cpu.rotationSpeed = 0;
+  cpu.state = 'DEFEND';
+  cpu.stateTimer = 0;
+  cpu.stuckCounter = 0;
+  cpu.tactic = 'STRAIGHT';
+  cpu.tacticTimer = 0;
+  cpu.shootCooldown = 0;
+  cpu.hasShot = false;
+  cpu.ownGoalAttempts = 0;
+  cpu.stealCooldown = 0;
+}
+
+function isLeadingPuck(p) {
+  const dist = Math.hypot(p.x - puck.x, p.y - puck.y);
+  const puckSpeed = Math.hypot(puck.vx, puck.vy);
+  
+  if (dist < LEAD_DISTANCE && puckSpeed < 8) {
+    const dx = puck.x - p.x;
+    const dy = puck.y - p.y;
+    const playerSpeed = Math.hypot(p.vx, p.vy);
+    
+    if (playerSpeed > 0.5) {
+      const dot = (p.vx * dx + p.vy * dy) / (playerSpeed * dist);
+      if (dot > 0.3) return true;
+    }
+    
+    if (puckSpeed < 3) return true;
+  }
+  
+  return false;
+}
+
+function performSteal(stealer, victim) {
+  const stealerName = stealer.team === 'blue' ? 'ВЫ' : 'ИИ';
+  const victimName = victim.team === 'blue' ? 'ВЫ' : 'ИИ';
+  
+  stealText = `ОТБОР! ${stealerName} отобрал у ${victimName}!`;
+  stealX = puck.x;
+  stealY = puck.y;
+  stealFlash = 30;
+  
+  const dx = stealer.x - puck.x;
+  const dy = stealer.y - puck.y;
+  const dist = Math.hypot(dx, dy);
+  
+  if (dist > 0) {
+    const power = 6;
+    puck.vx = (dx / dist) * power;
+    puck.vy = (dy / dist) * power;
+  }
+  
+  stealer.stealCooldown = 40;
+  victim.stealCooldown = 40;
+}
+
+function isInsideRoundedRect(x, y, margin = 0) {
+  const R = CORNER_R - margin;
+  if (x >= R && x <= FIELD_W - R && y >= 0 && y <= FIELD_H) return true;
+  if (y >= R && y <= FIELD_H - R && x >= 0 && x <= FIELD_W) return true;
+  
+  const corners = [
+    { cx: R, cy: R },
+    { cx: FIELD_W - R, cy: R },
+    { cx: R, cy: FIELD_H - R },
+    { cx: FIELD_W - R, cy: FIELD_H - R }
+  ];
+  
+  for (const c of corners) {
+    const dx = x - c.cx;
+    const dy = y - c.cy;
+    if (dx * dx + dy * dy <= R * R) return true;
+  }
+  return false;
+}
+
+function canPlayerBeAt(x, y, radius) {
+  if (isInsideRoundedRect(x, y, radius)) {
+    if (isInGoalRect(x, y, 'left') || isInGoalRect(x, y, 'right')) return false;
+    return true;
+  }
+  if (isInCrease(x, y, 'left') || isInCrease(x, y, 'right')) return true;
+  return false;
+}
+
+function getPointOnFieldEdge(targetX, targetY) {
+  if (canPlayerBeAt(targetX, targetY, PLAYER_R + 5)) {
+    return { x: targetX, y: targetY };
+  }
+  
+  const cx = FIELD_W / 2;
+  const cy = FIELD_H / 2;
+  const dx = targetX - cx;
+  const dy = targetY - cy;
+  const dist = Math.hypot(dx, dy);
+  if (dist === 0) return { x: cx, y: cy };
+  
+  const nx = dx / dist;
+  const ny = dy / dist;
+  
+  let lo = 0, hi = dist;
+  let bestX = cx, bestY = cy;
+  
+  for (let iter = 0; iter < 25; iter++) {
+    const mid = (lo + hi) / 2;
+    const px = cx + nx * mid;
+    const py = cy + ny * mid;
+    
+    if (canPlayerBeAt(px, py, PLAYER_R + 5)) {
+      bestX = px;
+      bestY = py;
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+  
+  return { x: bestX, y: bestY };
+}
+
+function handlePostCollision(x, y, r, vx, vy) {
+  const g = getGoalGeometry();
+  const postRadius = POST_THICKNESS / 2 + r;
+  
+  const posts = [
+    ...g.left.posts,
+    ...g.right.posts
+  ];
+  
+  for (const post of posts) {
+    const dx = x - post.x;
+    const dy = y - post.y;
+    const dist = Math.hypot(dx, dy);
+    
+    if (dist < postRadius && dist > 0) {
+      const nx = dx / dist;
+      const ny = dy / dist;
+      
+      const overlap = postRadius - dist;
+      x += nx * overlap;
+      y += ny * overlap;
+      
+      const dot = vx * nx + vy * ny;
+      vx -= 2 * dot * nx;
+      vy -= 2 * dot * ny;
+      vx *= 0.85;
+      vy *= 0.85;
+      
+      return { x, y, vx, vy, hit: true };
+    }
+  }
+  
+  return { x, y, vx, vy, hit: false };
+}
+
+function handlePuckBoundary() {
+  const g = getGoalGeometry();
+  
+  const postResult = handlePostCollision(puck.x, puck.y, puck.r, puck.vx, puck.vy);
+  if (postResult.hit) {
+    puck.x = postResult.x;
+    puck.y = postResult.y;
+    puck.vx = postResult.vx;
+    puck.vy = postResult.vy;
+    return;
+  }
+  
+  const R = CORNER_R;
+  const corners = [
+    { cx: R, cy: R, zoneX: 'left', zoneY: 'top' },
+    { cx: FIELD_W - R, cy: R, zoneX: 'right', zoneY: 'top' },
+    { cx: R, cy: FIELD_H - R, zoneX: 'left', zoneY: 'bottom' },
+    { cx: FIELD_W - R, cy: FIELD_H - R, zoneX: 'right', zoneY: 'bottom' }
+  ];
+  
+  let inCorner = false;
+  for (const corner of corners) {
+    const inX = (corner.zoneX === 'left' && puck.x < R) || (corner.zoneX === 'right' && puck.x > FIELD_W - R);
+    const inY = (corner.zoneY === 'top' && puck.y < R) || (corner.zoneY === 'bottom' && puck.y > FIELD_H - R);
+    
+    if (inX && inY) {
+      const dx = puck.x - corner.cx;
+      const dy = puck.y - corner.cy;
+      const dist = Math.hypot(dx, dy);
+      const maxDist = R - puck.r;
+      
+      if (dist > maxDist && dist > 0) {
+        const nx = dx / dist;
+        const ny = dy / dist;
+        
+        puck.x = corner.cx + nx * maxDist;
+        puck.y = corner.cy + ny * maxDist;
+        
+        const dot = puck.vx * nx + puck.vy * ny;
+        puck.vx -= 2 * dot * nx;
+        puck.vy -= 2 * dot * ny;
+        puck.vx *= 0.85;
+        puck.vy *= 0.85;
+        
+        inCorner = true;
+        break;
+      }
+    }
+  }
+  
+  if (inCorner) return;
+  
+  if (puck.y - puck.r < 0) { puck.y = puck.r; puck.vy *= -0.85; }
+  if (puck.y + puck.r > FIELD_H) { puck.y = FIELD_H - puck.r; puck.vy *= -0.85; }
+  
+  const inLeftGoalY = puck.y > g.top && puck.y < g.bottom;
+  
+  if (inLeftGoalY) {
+    if (puck.x < g.left.goalLine && puck.vx < 0) {
+      goalScored(2);
+      return;
+    }
+    const backWall = g.left.goalRect.x1;
+    if (puck.x - puck.r < backWall && puck.vx < 0) {
+      puck.x = backWall + puck.r;
+      puck.vx *= -0.85;
+      return;
+    }
+  } else {
+    if (puck.x - puck.r < g.left.goalLine && puck.vx < 0) {
+      puck.x = g.left.goalLine + puck.r;
+      puck.vx *= -0.85;
+      return;
+    }
+  }
+  
+  const inRightGoalY = puck.y > g.top && puck.y < g.bottom;
+  
+  if (inRightGoalY) {
+    if (puck.x > g.right.goalLine && puck.vx > 0) {
+      goalScored(1);
+      return;
+    }
+    const backWall = g.right.goalRect.x2;
+    if (puck.x + puck.r > backWall && puck.vx > 0) {
+      puck.x = backWall - puck.r;
+      puck.vx *= -0.85;
+      return;
+    }
+  } else {
+    if (puck.x + puck.r > g.right.goalLine && puck.vx > 0) {
+      puck.x = g.right.goalLine - puck.r;
+      puck.vx *= -0.85;
+      return;
+    }
+  }
+}
+
+function clampPlayerToField(p) {
+  const R = CORNER_R;
+  let x = p.x, y = p.y;
+  const g = getGoalGeometry();
+  
+  y = Math.max(p.r + 2, Math.min(FIELD_H - p.r - 2, y));
+  
+  if (isInGoalRect(x, y, 'left') || isInGoalRect(x, y, 'right')) {
+    if (isInGoalRect(x, y, 'left')) {
+      x = g.left.goalLine + p.r + 2;
+    } else {
+      x = g.right.goalLine - p.r - 2;
+    }
+  }
+  
+  x = Math.max(p.r + 2, Math.min(FIELD_W - p.r - 2, x));
+  
+  const corners = [
+    { cx: R, cy: R, zoneX: 'left', zoneY: 'top' },
+    { cx: FIELD_W - R, cy: R, zoneX: 'right', zoneY: 'top' },
+    { cx: R, cy: FIELD_H - R, zoneX: 'left', zoneY: 'bottom' },
+    { cx: FIELD_W - R, cy: FIELD_H - R, zoneX: 'right', zoneY: 'bottom' }
+  ];
+  
+  for (const corner of corners) {
+    const inX = (corner.zoneX === 'left' && x < R) || (corner.zoneX === 'right' && x > FIELD_W - R);
+    const inY = (corner.zoneY === 'top' && y < R) || (corner.zoneY === 'bottom' && y > FIELD_H - R);
+    
+    if (inX && inY) {
+      const dx = x - corner.cx;
+      const dy = y - corner.cy;
+      const dist = Math.hypot(dx, dy);
+      const maxDist = R - p.r - 2;
+      
+      if (dist > maxDist && dist > 0) {
+        const nx = dx / dist;
+        const ny = dy / dist;
+        x = corner.cx + nx * maxDist;
+        y = corner.cy + ny * maxDist;
+      }
+      break;
+    }
+  }
+  
+  p.lastX = p.x;
+  p.lastY = p.y;
+  p.x = x;
+  p.y = y;
+}
+
+function cpuIsBetweenPuckAndOwnGoal() {
+  return cpu.x > puck.x + 5;
+}
+
+function puckMovingToCPUGoal() {
+  return puck.vx > 2 && puck.x > FIELD_W / 2;
+}
+
+function getGoalDirection(fromX, fromY) {
+  return { x: 0 - fromX, y: FIELD_H/2 - fromY };
+}
+
+function checkStickHit(p, isPlayer) {
+  const tip = getStickTip(p);
+  const dx = puck.x - tip.x;
+  const dy = puck.y - tip.y;
+  const dist = Math.hypot(dx, dy);
+  const minDist = STICK_R + puck.r;
+  
+  if (dist < minDist && dist > 0) {
+    const nx = dx / dist;
+    const ny = dy / dist;
+    const overlap = minDist - dist;
+    puck.x += nx * overlap;
+    puck.y += ny * overlap;
+    
+    const rotPower = Math.abs(p.rotationSpeed);
+    let power = 4 + rotPower * 30;
+    power = Math.min(power, 14);
+    
+    if (p.stealCooldown > 0) {
+      const goalDir = getGoalDirection(puck.x, puck.y);
+      const goalAngle = Math.atan2(goalDir.y, goalDir.x);
+      const hitAngle = Math.atan2(ny, nx);
+      
+      if (!isPlayer) {
+        let finalAngle = goalAngle * 0.6 + hitAngle * 0.4;
+        while (finalAngle > Math.PI) finalAngle -= Math.PI * 2;
+        while (finalAngle < -Math.PI) finalAngle += Math.PI * 2;
+        
+        if (Math.cos(finalAngle) > 0) {
+          finalAngle = Math.PI - finalAngle;
+        }
+        
+        puck.vx = Math.cos(finalAngle) * power;
+        puck.vy = Math.sin(finalAngle) * power;
+        
+        if (puck.vx > 0) {
+          puck.vx = -Math.abs(puck.vx);
+        }
+        
+        const tangential = p.rotationSpeed * 8;
+        puck.vy += tangential;
+      } else {
+        const finalAngle = hitAngle * 0.7 + goalAngle * 0.3;
+        puck.vx = Math.cos(finalAngle) * power;
+        puck.vy = Math.sin(finalAngle) * power;
+        
+        const tangential = p.rotationSpeed * 8;
+        puck.vx += -ny * tangential;
+        puck.vy += nx * tangential;
+      }
+      return true;
+    }
+    
+    const otherPlayer = isPlayer ? cpu : player;
+    if (isLeadingPuck(otherPlayer)) {
+      performSteal(p, otherPlayer);
+      return true;
+    }
+    
+    const goalDir = getGoalDirection(puck.x, puck.y);
+    const goalAngle = Math.atan2(goalDir.y, goalDir.x);
+    const hitAngle = Math.atan2(ny, nx);
+    
+    if (!isPlayer) {
+      if (cpuIsBetweenPuckAndOwnGoal()) {
+        cpu.ownGoalAttempts++;
+        const deflectAngle = Math.PI + (Math.random() - 0.5) * 0.5;
+        puck.vx = Math.cos(deflectAngle) * power * 1.2;
+        puck.vy = Math.sin(deflectAngle) * power * 0.5;
+        return true;
+      }
+      
+      let finalAngle = goalAngle * 0.6 + hitAngle * 0.4;
+      while (finalAngle > Math.PI) finalAngle -= Math.PI * 2;
+      while (finalAngle < -Math.PI) finalAngle += Math.PI * 2;
+      
+      if (Math.cos(finalAngle) > 0) {
+        finalAngle = Math.PI - finalAngle;
+      }
+      
+      puck.vx = Math.cos(finalAngle) * power;
+      puck.vy = Math.sin(finalAngle) * power;
+      
+      if (puck.vx > 0) {
+        puck.vx = -Math.abs(puck.vx);
+      }
+      
+      const tangential = p.rotationSpeed * 8;
+      puck.vy += tangential;
+    } else {
+      const finalAngle = hitAngle * 0.7 + goalAngle * 0.3;
+      puck.vx = Math.cos(finalAngle) * power;
+      puck.vy = Math.sin(finalAngle) * power;
+      
+      const tangential = p.rotationSpeed * 8;
+      puck.vx += -ny * tangential;
+      puck.vy += nx * tangential;
+    }
+    
+    return true;
+  }
+  return false;
+}
+
+function checkBodyHit(p) {
+  const dx = puck.x - p.x;
+  const dy = puck.y - p.y;
+  const dist = Math.hypot(dx, dy);
+  const minDist = p.r + puck.r;
+  
+  if (dist < minDist && dist > 0) {
+    const nx = dx / dist;
+    const ny = dy / dist;
+    const overlap = minDist - dist;
+    puck.x += nx * overlap;
+    puck.y += ny * overlap;
+    
+    if (p.team === 'red') {
+      if (cpuIsBetweenPuckAndOwnGoal()) {
+        puck.vx = -Math.abs(nx * 3);
+        puck.vy = ny * 2;
+      } else {
+        puck.vx = nx * 2 + p.vx * 0.3;
+        puck.vy = ny * 2 + p.vy * 0.3;
+        
+        if (puck.vx > 1.5) {
+          puck.vx = -Math.abs(puck.vx) * 0.7;
+        }
+      }
+    } else {
+      puck.vx = nx * 2 + p.vx * 0.3;
+      puck.vy = ny * 2 + p.vy * 0.3;
+    }
+  }
+}
+
+function updatePlayer() {
+  if (player.stealCooldown > 0) player.stealCooldown--;
+  
+  let dx = 0, dy = 0;
+  if (keys['w'] || keys['ц'] || keys['arrowup']) dy -= 1;
+  if (keys['s'] || keys['ы'] || keys['arrowdown']) dy += 1;
+  if (keys['a'] || keys['ф'] || keys['arrowleft']) dx -= 1;
+  if (keys['d'] || keys['в'] || keys['arrowright']) dx += 1;
+  
+  if (dx !== 0 || dy !== 0) {
+    const len = Math.hypot(dx, dy);
+    player.vx = (dx / len) * PLAYER_SPEED;
+    player.vy = (dy / len) * PLAYER_SPEED;
+  } else {
+    player.vx *= 0.8;
+    player.vy *= 0.8;
+  }
+  
+  player.x += player.vx;
+  player.y += player.vy;
+  clampPlayerToField(player);
+  
+  if (keys['q'] || keys['й']) {
+    player.rotationSpeed = -ROTATE_SPEED;
+  } else if (keys['e'] || keys['у']) {
+    player.rotationSpeed = ROTATE_SPEED;
+  } else {
+    player.rotationSpeed *= 0.85;
+  }
+  
+  player.angle += player.rotationSpeed;
+  
+  checkStickHit(player, true);
+  checkBodyHit(player);
+}
+
+function pickNewTactic() {
+  let newTactic;
+  do {
+    newTactic = TACTICS[Math.floor(Math.random() * TACTICS.length)];
+  } while (newTactic === cpu.tactic && TACTICS.length > 1);
+  
+  cpu.tactic = newTactic;
+  cpu.tacticTimer = 0;
+  cpu.tacticDuration = 90 + Math.random() * 120;
+  cpu.zigzagPhase = 0;
+  cpu.feintDirection = Math.random() > 0.5 ? 1 : -1;
+  cpu.hasShot = false;
+}
+
+function cpuShoot(power = 10) {
+  if (cpuIsBetweenPuckAndOwnGoal()) {
+    cpu.ownGoalAttempts++;
+    return false;
+  }
+  
+  if (puck.x > cpu.x - 10) {
+    return false;
+  }
+  
+  const goalAngle = Math.atan2(FIELD_H/2 - puck.y, 0 - puck.x);
+  
+  // aiDifficulty влияет на точность
+  const accuracy = 0.1 + (aiDifficulty / 100) * 0.4; // от 0.1 до 0.5
+  const spread = (Math.random() - 0.5) * accuracy;
+  const finalAngle = goalAngle + spread;
+  
+  if (Math.cos(finalAngle) > 0) {
+    return false;
+  }
+  
+  const angleToPuck = Math.atan2(puck.y - cpu.y, puck.x - cpu.x);
+  cpu.angle = angleToPuck;
+  
+  cpu.rotationSpeed = -getCPURotateSpeed() * 1.5;
+  
+  setTimeout(() => {
+    cpu.rotationSpeed = getCPURotateSpeed() * 2;
+  }, 100);
+  
+  cpu.shootCooldown = 60;
+  cpu.hasShot = true;
+  return true;
+}
+
+function updateCPU() {
+  if (cpu.stealCooldown > 0) cpu.stealCooldown--;
+  cpu.stateTimer++;
+  if (cpu.shootCooldown > 0) cpu.shootCooldown--;
+  
+  const cpuSpeed = getCPUSpeed();
+  const cpuRotateSpeed = getCPURotateSpeed();
+  
+  const moved = Math.hypot(cpu.x - cpu.lastX, cpu.y - cpu.lastY);
+  if (moved < 0.5) {
+    cpu.stuckCounter++;
+  } else {
+    cpu.stuckCounter = Math.max(0, cpu.stuckCounter - 2);
+  }
+  cpu.lastX = cpu.x;
+  cpu.lastY = cpu.y;
+  
+  if (cpu.stuckCounter > 30) {
+    const corners = [
+      { cx: CORNER_R, cy: CORNER_R },
+      { cx: FIELD_W - CORNER_R, cy: CORNER_R },
+      { cx: CORNER_R, cy: FIELD_H - CORNER_R },
+      { cx: FIELD_W - CORNER_R, cy: FIELD_H - CORNER_R }
+    ];
+    
+    let nearestCorner = null;
+    let minDist = Infinity;
+    for (const c of corners) {
+      const d = Math.hypot(cpu.x - c.cx, cpu.y - c.cy);
+      if (d < minDist) { minDist = d; nearestCorner = c; }
+    }
+    
+    if (nearestCorner && minDist < CORNER_R + 20) {
+      const dx = FIELD_W/2 - cpu.x;
+      const dy = FIELD_H/2 - cpu.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 0) {
+        cpu.x += (dx / dist) * cpuSpeed * 1.5;
+        cpu.y += (dy / dist) * cpuSpeed * 1.5;
+        clampPlayerToField(cpu);
+      }
+    }
+    cpu.stuckCounter = 0;
+  }
+  
+  const distToPuck = Math.hypot(cpu.x - puck.x, cpu.y - puck.y);
+  const puckSpeed = Math.hypot(puck.vx, puck.vy);
+  const puckMovingToCPU = puck.vx < -2;
+  const puckOnCPUSide = puck.x > FIELD_W / 2;
+  
+  const predTime = Math.min(30, 60 / Math.max(1, puckSpeed));
+  const predPuckX = puck.x + puck.vx * predTime;
+  const predPuckY = puck.y + puck.vy * predTime;
+  
+  if (puckMovingToCPUGoal() || (puck.x > FIELD_W - 200 && puck.vx > 0)) {
+    cpu.state = 'DEFEND_OWN_GOAL';
+  } else if (puckMovingToCPU && puckSpeed > 3) {
+    cpu.state = 'INTERCEPT';
+  } else if (distToPuck < 150 || (puckOnCPUSide && puckSpeed < 5)) {
+    cpu.state = 'ATTACK';
+  } else if (puck.x < FIELD_W / 3) {
+    cpu.state = 'ATTACK';
+  } else {
+    cpu.state = 'DEFEND';
+  }
+  
+  if (cpu.state === 'ATTACK') {
+    cpu.tacticTimer++;
+    
+    if (cpu.tacticTimer > cpu.tacticDuration || distToPuck > 200) {
+      pickNewTactic();
+    }
+    
+    const tip = getStickTip(cpu);
+    const distTipToPuck = Math.hypot(tip.x - puck.x, tip.y - puck.y);
+    
+    // aiDifficulty влияет на расстояние и вероятность удара
+    const shootDistance = 150 + (aiDifficulty / 100) * 250;
+    const shootProbability = 0.3 + (aiDifficulty / 100) * 0.6;
+    
+    if (distTipToPuck < STICK_R + PUCK_R + 15 && cpu.shootCooldown <= 0 && !cpu.hasShot) {
+      const puckLeftOfCPU = puck.x < cpu.x - 10;
+      if (puckLeftOfCPU) {
+        const distToGoal = Math.hypot(puck.x - 0, puck.y - FIELD_H/2);
+        
+        const shouldShoot = (distToGoal < shootDistance || aiDifficulty > 70) && Math.random() < shootProbability;
+        
+        if (shouldShoot) {
+          const shotPower = cpu.tactic === 'SNIPER' ? 13 : 10;
+          cpuShoot(shotPower);
+        }
+      }
+    }
+  }
+  
+  let targetX, targetY;
+  
+  switch (cpu.state) {
+    case 'DEFEND_OWN_GOAL': {
+      const goalCenterX = FIELD_W - GOAL_LINE_OFFSET;
+      const goalCenterY = FIELD_H / 2;
+      
+      const midX = (puck.x + goalCenterX) / 2;
+      const midY = (puck.y + goalCenterY) / 2;
+      
+      targetX = Math.min(midX, FIELD_W - GOAL_LINE_OFFSET - 30);
+      targetY = midY;
+      
+      if (distToPuck < 50) {
+        targetX = puck.x + 30;
+        targetY = puck.y;
+      }
+      break;
+    }
+    
+    case 'INTERCEPT': {
+      targetX = predPuckX;
+      targetY = predPuckY;
+      
+      const angleToGoal = Math.atan2(FIELD_H/2 - predPuckY, 0 - predPuckX);
+      const offsetDist = 40;
+      targetX = predPuckX + Math.cos(angleToGoal) * offsetDist;
+      targetY = predPuckY + Math.sin(angleToGoal) * offsetDist;
+      break;
+    }
+    
+    case 'ATTACK': {
+      if (aiDifficulty < 30) {
+        const goalX = 50;
+        const goalY = FIELD_H/2;
+        
+        targetX = (puck.x + goalX) / 2;
+        targetY = (puck.y + goalY) / 2;
+      } else if (aiDifficulty > 70) {
+        switch (cpu.tactic) {
+          case 'STRAIGHT': {
+            const attackOffset = 30;
+            targetX = puck.x + attackOffset;
+            targetY = puck.y;
+            break;
+          }
+          
+          case 'FLANK': {
+            const sideOffset = cpu.attackSide * 50;
+            targetX = puck.x + 20;
+            targetY = puck.y + sideOffset;
+            
+            if (cpu.tacticTimer % 60 === 0) {
+              cpu.attackSide *= -1;
+            }
+            break;
+          }
+          
+          case 'ZIGZAG': {
+            cpu.zigzagPhase += 0.15;
+            const zigzagOffset = Math.sin(cpu.zigzagPhase) * 40;
+            
+            const baseX = puck.x + 40;
+            const baseY = puck.y;
+            targetX = baseX;
+            targetY = baseY + zigzagOffset;
+            break;
+          }
+          
+          case 'SNIPER': {
+            const sniperDist = 120;
+            const angleToPuck = Math.atan2(puck.y - FIELD_H/2, puck.x - FIELD_W);
+            targetX = puck.x + Math.cos(angleToPuck) * sniperDist;
+            targetY = puck.y + Math.sin(angleToPuck) * sniperDist;
+            
+            if (distToPuck < 80 && cpu.shootCooldown <= 0) {
+              targetX = puck.x + 15;
+              targetY = puck.y;
+            }
+            break;
+          }
+          
+          case 'FEINT': {
+            const feintPhase = cpu.tacticTimer % 90;
+            if (feintPhase < 30) {
+              targetX = puck.x + 60;
+              targetY = puck.y + cpu.feintDirection * 60;
+            } else if (feintPhase < 60) {
+              targetX = puck.x + 20;
+              targetY = puck.y;
+            } else {
+              targetX = puck.x - 10;
+              targetY = puck.y;
+            }
+            
+            if (feintPhase === 0) {
+              cpu.feintDirection *= -1;
+            }
+            break;
+          }
+        }
+        
+        if (targetX > puck.x + 20) {
+          targetX = puck.x + 20;
+        }
+      } else {
+        switch (cpu.tactic) {
+          case 'STRAIGHT': {
+            const attackOffset = 30;
+            targetX = puck.x + attackOffset;
+            targetY = puck.y;
+            break;
+          }
+          
+          case 'FLANK': {
+            const sideOffset = cpu.attackSide * 50;
+            targetX = puck.x + 20;
+            targetY = puck.y + sideOffset;
+            
+            if (cpu.tacticTimer % 60 === 0) {
+              cpu.attackSide *= -1;
+            }
+            break;
+          }
+          
+          case 'ZIGZAG': {
+            cpu.zigzagPhase += 0.15;
+            const zigzagOffset = Math.sin(cpu.zigzagPhase) * 40;
+            
+            const baseX = puck.x + 40;
+            const baseY = puck.y;
+            targetX = baseX;
+            targetY = baseY + zigzagOffset;
+            break;
+          }
+          
+          case 'SNIPER': {
+            const sniperDist = 120;
+            const angleToPuck = Math.atan2(puck.y - FIELD_H/2, puck.x - FIELD_W);
+            targetX = puck.x + Math.cos(angleToPuck) * sniperDist;
+            targetY = puck.y + Math.sin(angleToPuck) * sniperDist;
+            
+            if (distToPuck < 80 && cpu.shootCooldown <= 0) {
+              targetX = puck.x + 15;
+              targetY = puck.y;
+            }
+            break;
+          }
+          
+          case 'FEINT': {
+            const feintPhase = cpu.tacticTimer % 90;
+            if (feintPhase < 30) {
+              targetX = puck.x + 60;
+              targetY = puck.y + cpu.feintDirection * 60;
+            } else if (feintPhase < 60) {
+              targetX = puck.x + 20;
+              targetY = puck.y;
+            } else {
+              targetX = puck.x - 10;
+              targetY = puck.y;
+            }
+            
+            if (feintPhase === 0) {
+              cpu.feintDirection *= -1;
+            }
+            break;
+          }
+        }
+        
+        if (targetX > puck.x + 20) {
+          targetX = puck.x + 20;
+        }
+      }
+      break;
+    }
+    
+    case 'DEFEND': {
+      const defendX = FIELD_W - 180;
+      const defendY = FIELD_H/2 + (puck.y - FIELD_H/2) * 0.5;
+      targetX = defendX;
+      targetY = defendY;
+      break;
+    }
+  }
+  
+  const safeTarget = getPointOnFieldEdge(targetX, targetY);
+  targetX = safeTarget.x;
+  targetY = safeTarget.y;
+  
+  const dxT = targetX - cpu.x;
+  const dyT = targetY - cpu.y;
+  const distT = Math.hypot(dxT, dyT);
+  
+  if (distT > 3) {
+    let speedMul = 0.75;
+    if (cpu.state === 'INTERCEPT' || cpu.state === 'DEFEND_OWN_GOAL') speedMul = 0.95;
+    if (cpu.state === 'ATTACK' && distToPuck < 80) speedMul = 1.0;
+    if (cpu.tactic === 'SNIPER') speedMul = 0.85;
+    
+    const speed = Math.min(cpuSpeed * speedMul, distT * 0.12);
+    cpu.vx = (dxT / distT) * speed;
+    cpu.vy = (dyT / distT) * speed;
+  } else {
+    cpu.vx *= 0.7;
+    cpu.vy *= 0.7;
+  }
+  
+  cpu.x += cpu.vx;
+  cpu.y += cpu.vy;
+  clampPlayerToField(cpu);
+  
+  const angleToPuck = Math.atan2(puck.y - cpu.y, puck.x - cpu.x);
+  let angleDiff = angleToPuck - cpu.angle;
+  while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+  while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+  
+  if (Math.abs(angleDiff) > 0.15) {
+    cpu.rotationSpeed = Math.sign(angleDiff) * cpuRotateSpeed;
+  } else {
+    cpu.rotationSpeed *= 0.85;
+  }
+  cpu.angle += cpu.rotationSpeed;
+  
+  checkStickHit(cpu, false);
+  checkBodyHit(cpu);
+}
+
+function updatePuck() {
+  puck.x += puck.vx;
+  puck.y += puck.vy;
+  
+  puck.vx *= FRICTION;
+  puck.vy *= FRICTION;
+  
+  const speed = Math.hypot(puck.vx, puck.vy);
+  if (speed > MAX_PUCK_SPEED) {
+    puck.vx = (puck.vx / speed) * MAX_PUCK_SPEED;
+    puck.vy = (puck.vy / speed) * MAX_PUCK_SPEED;
+  }
+  if (speed < 0.05) { puck.vx = 0; puck.vy = 0; }
+  
+  handlePuckBoundary();
+  
+  if (speed > 1) {
+    puck.trail.push({x: puck.x, y: puck.y});
+    if (puck.trail.length > 14) puck.trail.shift();
+  } else {
+    if (puck.trail.length > 0) puck.trail.shift();
+  }
+}
+
+function goalScored(team) {
+  if (team === 1) score1++; else score2++;
+  goalScorer = team;
+  goalFlash = 60;
+  crowdJumpTime = 180;
+  updateScoreboard(true);
+  showOverlay(team === 1 ? '⚡ ГОЛ! ВЫ ЗАБИЛИ! ⚡' : ' ГОЛ! КОМПЬЮТЕР! ');
+}
+
+function updateScoreboard(animate = false) {
+  document.getElementById('score1').textContent = `ВЫ: ${score1}`;
+  document.getElementById('score2').textContent = `КОМПЬЮТЕР: ${score2}`;
+  if (animate) {
+    const el = document.getElementById(goalScorer === 1 ? 'score1' : 'score2');
+    el.classList.add('flash');
+    setTimeout(() => el.classList.remove('flash'), 400);
+  }
+}
+
+function showOverlay(text) {
+  paused = true;
+  document.getElementById('overlayText').textContent = text;
+  document.getElementById('overlay').classList.add('show');
+}
+
+document.getElementById('continueBtn').addEventListener('click', () => {
+  document.getElementById('overlay').classList.remove('show');
+  paused = false;
+  resetPositions();
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  score1 = 0; score2 = 0;
+  updateScoreboard();
+  resetPositions();
+});
+
+document.getElementById('toggleHudBtn').addEventListener('click', (event) => {
+  hudVisible = !hudVisible;
+  event.currentTarget.textContent = hudVisible ? '👁 СКРЫТЬ ПАНЕЛИ' : '👁 ПОКАЗАТЬ ПАНЕЛИ';
+  event.currentTarget.setAttribute('aria-pressed', String(!hudVisible));
+});
+
+let frameCount = 0;
+
+function drawField() {
+  ctx.save();
+  ctx.translate(FIELD_X, FIELD_Y);
+  
+  const g = getGoalGeometry();
+  
+  const grad = ctx.createLinearGradient(0, 0, 0, FIELD_H);
+  grad.addColorStop(0, '#f5f9fc');
+  grad.addColorStop(0.5, '#ffffff');
+  grad.addColorStop(1, '#f5f9fc');
+  ctx.fillStyle = grad;
+  
+  ctx.beginPath();
+  ctx.moveTo(CORNER_R, 0);
+  ctx.lineTo(FIELD_W - CORNER_R, 0);
+  ctx.arcTo(FIELD_W, 0, FIELD_W, CORNER_R, CORNER_R);
+  ctx.lineTo(FIELD_W, FIELD_H - CORNER_R);
+  ctx.arcTo(FIELD_W, FIELD_H, FIELD_W - CORNER_R, FIELD_H, CORNER_R);
+  ctx.lineTo(CORNER_R, FIELD_H);
+  ctx.arcTo(0, FIELD_H, 0, FIELD_H - CORNER_R, CORNER_R);
+  ctx.lineTo(0, CORNER_R);
+  ctx.arcTo(0, 0, CORNER_R, 0, CORNER_R);
+  ctx.closePath();
+  ctx.fill();
+  
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(CORNER_R, 0);
+  ctx.lineTo(FIELD_W - CORNER_R, 0);
+  ctx.arcTo(FIELD_W, 0, FIELD_W, CORNER_R, CORNER_R);
+  ctx.lineTo(FIELD_W, FIELD_H - CORNER_R);
+  ctx.arcTo(FIELD_W, FIELD_H, FIELD_W - CORNER_R, FIELD_H, CORNER_R);
+  ctx.lineTo(CORNER_R, FIELD_H);
+  ctx.arcTo(0, FIELD_H, 0, FIELD_H - CORNER_R, CORNER_R);
+  ctx.lineTo(0, CORNER_R);
+  ctx.arcTo(0, 0, CORNER_R, 0, CORNER_R);
+  ctx.closePath();
+  ctx.clip();
+  
+  ctx.strokeStyle = 'rgba(200, 220, 240, 0.3)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < FIELD_W; i += 30) {
+    ctx.beginPath();
+    ctx.moveTo(i, 0);
+    ctx.lineTo(i, FIELD_H);
+    ctx.stroke();
+  }
+  
+  ctx.fillStyle = '#d32f2f';
+  ctx.fillRect(FIELD_W/2 - 3, 0, 6, FIELD_H);
+  
+  ctx.fillStyle = '#1976d2';
+  ctx.fillRect(FIELD_W/3 - 3, 0, 6, FIELD_H);
+  ctx.fillRect(2*FIELD_W/3 - 3, 0, 6, FIELD_H);
+  
+  ctx.strokeStyle = '#1976d2';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(FIELD_W/2, FIELD_H/2, 70, 0, Math.PI * 2);
+  ctx.stroke();
+  
+  ctx.fillStyle = '#1976d2';
+  ctx.beginPath();
+  ctx.arc(FIELD_W/2, FIELD_H/2, 6, 0, Math.PI * 2);
+  ctx.fill();
+  
+  [[FIELD_W/4, FIELD_H/4], [3*FIELD_W/4, FIELD_H/4], 
+   [FIELD_W/4, 3*FIELD_H/4], [3*FIELD_W/4, 3*FIELD_H/4]].forEach(([x, y]) => {
+    ctx.fillStyle = '#d32f2f';
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#d32f2f';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 35, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+  
+  ctx.restore();
+  
+  ctx.fillStyle = 'rgba(100, 180, 255, 0.35)';
+  ctx.beginPath();
+  ctx.arc(g.left.crease.cx, g.left.crease.cy, g.left.crease.r, -Math.PI/2, Math.PI/2);
+  ctx.closePath();
+  ctx.fill();
+  
+  ctx.strokeStyle = '#d32f2f';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(g.left.crease.cx, g.left.crease.cy, g.left.crease.r, -Math.PI/2, Math.PI/2);
+  ctx.stroke();
+  
+  ctx.fillStyle = 'rgba(100, 180, 255, 0.35)';
+  ctx.beginPath();
+  ctx.arc(g.right.crease.cx, g.right.crease.cy, g.right.crease.r, Math.PI/2, -Math.PI/2);
+  ctx.closePath();
+  ctx.fill();
+  
+  ctx.strokeStyle = '#d32f2f';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(g.right.crease.cx, g.right.crease.cy, g.right.crease.r, Math.PI/2, -Math.PI/2);
+  ctx.stroke();
+  
+  const lg = g.left.goalRect;
+  ctx.fillStyle = 'rgba(200, 220, 240, 0.5)';
+  ctx.fillRect(lg.x1, lg.y1, lg.x2 - lg.x1, lg.y2 - lg.y1);
+  
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+  ctx.lineWidth = 1;
+  const step = 5;
+  for (let j = lg.y1; j <= lg.y2; j += step) {
+    ctx.beginPath(); ctx.moveTo(lg.x1, j); ctx.lineTo(lg.x2, j); ctx.stroke();
+  }
+  for (let i = lg.x1; i <= lg.x2; i += step) {
+    ctx.beginPath(); ctx.moveTo(i, lg.y1); ctx.lineTo(i, lg.y2); ctx.stroke();
+  }
+  
+  ctx.strokeStyle = '#d32f2f';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(lg.x1, lg.y1, lg.x2 - lg.x1, lg.y2 - lg.y1);
+  
+  const rg = g.right.goalRect;
+  ctx.fillStyle = 'rgba(200, 220, 240, 0.5)';
+  ctx.fillRect(rg.x1, rg.y1, rg.x2 - rg.x1, rg.y2 - rg.y1);
+  
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+  ctx.lineWidth = 1;
+  for (let j = rg.y1; j <= rg.y2; j += step) {
+    ctx.beginPath(); ctx.moveTo(rg.x1, j); ctx.lineTo(rg.x2, j); ctx.stroke();
+  }
+  for (let i = rg.x1; i <= rg.x2; i += step) {
+    ctx.beginPath(); ctx.moveTo(i, rg.y1); ctx.lineTo(i, rg.y2); ctx.stroke();
+  }
+  
+  ctx.strokeStyle = '#d32f2f';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(rg.x1, rg.y1, rg.x2 - rg.x1, rg.y2 - rg.y1);
+  
+  ctx.strokeStyle = '#d32f2f';
+  ctx.lineWidth = 3;
+  
+  ctx.beginPath();
+  ctx.moveTo(g.left.goalLine, 0);
+  ctx.lineTo(g.left.goalLine, g.top);
+  ctx.stroke();
+  
+  ctx.beginPath();
+  ctx.moveTo(g.left.goalLine, g.bottom);
+  ctx.lineTo(g.left.goalLine, FIELD_H);
+  ctx.stroke();
+  
+  ctx.beginPath();
+  ctx.moveTo(g.right.goalLine, 0);
+  ctx.lineTo(g.right.goalLine, g.top);
+  ctx.stroke();
+  
+  ctx.beginPath();
+  ctx.moveTo(g.right.goalLine, g.bottom);
+  ctx.lineTo(g.right.goalLine, FIELD_H);
+  ctx.stroke();
+  
+  ctx.strokeStyle = '#d32f2f';
+  ctx.lineWidth = POST_THICKNESS;
+  ctx.lineCap = 'round';
+  
+  ctx.beginPath();
+  ctx.moveTo(g.left.goalLine, g.top);
+  ctx.lineTo(g.left.goalLine, g.bottom);
+  ctx.stroke();
+  
+  ctx.beginPath();
+  ctx.moveTo(g.right.goalLine, g.top);
+  ctx.lineTo(g.right.goalLine, g.bottom);
+  ctx.stroke();
+  
+  ctx.fillStyle = '#d32f2f';
+  [
+    {x: g.left.goalLine, y: g.top}, {x: g.left.goalLine, y: g.bottom},
+    {x: g.right.goalLine, y: g.top}, {x: g.right.goalLine, y: g.bottom}
+  ].forEach(post => {
+    ctx.beginPath();
+    ctx.arc(post.x, post.y, POST_THICKNESS/2 + 2, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 6;
+  ctx.lineCap = 'butt';
+  ctx.beginPath();
+  ctx.moveTo(CORNER_R, 0);
+  ctx.lineTo(FIELD_W - CORNER_R, 0);
+  ctx.arcTo(FIELD_W, 0, FIELD_W, CORNER_R, CORNER_R);
+  ctx.lineTo(FIELD_W, FIELD_H - CORNER_R);
+  ctx.arcTo(FIELD_W, FIELD_H, FIELD_W - CORNER_R, FIELD_H, CORNER_R);
+  ctx.lineTo(CORNER_R, FIELD_H);
+  ctx.arcTo(0, FIELD_H, 0, FIELD_H - CORNER_R, CORNER_R);
+  ctx.lineTo(0, CORNER_R);
+  ctx.arcTo(0, 0, CORNER_R, 0, CORNER_R);
+  ctx.closePath();
+  ctx.stroke();
+  
+  ctx.restore();
+}
+
+function drawPlayer(p) {
+  ctx.save();
+  ctx.translate(FIELD_X, FIELD_Y);
+  
+  const isBlue = p.team === 'blue';
+  const mainColor = isBlue ? '#1976d2' : '#d32f2f';
+  const lightColor = isBlue ? '#4fc3f7' : '#ff5252';
+  const darkColor = isBlue ? '#0d47a1' : '#b71c1c';
+  
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath();
+  ctx.ellipse(p.x + 2, p.y + p.r - 2, p.r * 0.9, p.r * 0.4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  
+  const baseGrad = ctx.createRadialGradient(p.x, p.y + p.r * 0.3, 2, p.x, p.y + p.r * 0.3, p.r);
+  baseGrad.addColorStop(0, '#666');
+  baseGrad.addColorStop(1, '#1a1a1a');
+  ctx.fillStyle = baseGrad;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y + p.r * 0.3, p.r * 0.95, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  
+  const bodyGrad = ctx.createRadialGradient(p.x - 6, p.y - 6, 2, p.x, p.y, p.r);
+  bodyGrad.addColorStop(0, lightColor);
+  bodyGrad.addColorStop(0.6, mainColor);
+  bodyGrad.addColorStop(1, darkColor);
+  ctx.fillStyle = bodyGrad;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+  ctx.fill();
+  
+  ctx.strokeStyle = darkColor;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(p.x, p.y);
+  ctx.lineTo(p.x + Math.cos(p.angle) * p.r * 0.7, p.y + Math.sin(p.angle) * p.r * 0.7);
+  ctx.stroke();
+  
+  const tip = getStickTip(p);
+  
+  ctx.strokeStyle = '#3e2723';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(p.x + Math.cos(p.angle) * p.r * 0.8, p.y + Math.sin(p.angle) * p.r * 0.8);
+  ctx.lineTo(tip.x, tip.y);
+  ctx.stroke();
+  
+  ctx.fillStyle = '#212121';
+  ctx.beginPath();
+  ctx.arc(tip.x, tip.y, STICK_R, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  
+  if (Math.abs(p.rotationSpeed) > 0.02) {
+    const intensity = Math.min(1, Math.abs(p.rotationSpeed) * 10);
+    ctx.strokeStyle = `rgba(255, 235, 59, ${intensity * 0.8})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r + 5, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  
+  if (p.team === 'red') {
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = 'bold 11px Arial';
+    ctx.textAlign = 'center';
+    const stateIcons = { 
+      ATTACK: '⚔️', DEFEND: '🛡️', INTERCEPT: '🎯',
+      DEFEND_OWN_GOAL: '🚨'
+    };
+    ctx.fillText(stateIcons[cpu.state] || '', p.x, p.y - p.r - 12);
+  }
+  
+  ctx.restore();
+}
+
+function drawPuck() {
+  ctx.save();
+  ctx.translate(FIELD_X, FIELD_Y);
+  
+  for (let i = 0; i < puck.trail.length; i++) {
+    const t = puck.trail[i];
+    const alpha = (i / puck.trail.length) * 0.5;
+    const size = (i / puck.trail.length) * puck.r;
+    ctx.fillStyle = `rgba(30,30,30,${alpha})`;
+    ctx.beginPath();
+    ctx.arc(t.x, t.y, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.beginPath();
+  ctx.ellipse(puck.x + 2, puck.y + 4, puck.r * 0.9, puck.r * 0.4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  
+  const grad = ctx.createRadialGradient(puck.x - 2, puck.y - 2, 1, puck.x, puck.y, puck.r);
+  grad.addColorStop(0, '#555');
+  grad.addColorStop(0.5, '#222');
+  grad.addColorStop(1, '#000');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(puck.x, puck.y, puck.r, 0, Math.PI * 2);
+  ctx.fill();
+  
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  
+  ctx.restore();
+}
+
+function drawGoalFlash() {
+  if (goalFlash > 0) {
+    const alpha = goalFlash / 60 * 0.4;
+    const color = goalScorer === 1 ? `rgba(79,195,247,${alpha})` : `rgba(255,82,82,${alpha})`;
+    ctx.fillStyle = color;
+    ctx.save();
+    ctx.translate(FIELD_X, FIELD_Y);
+    ctx.beginPath();
+    ctx.moveTo(CORNER_R, 0);
+    ctx.lineTo(FIELD_W - CORNER_R, 0);
+    ctx.arcTo(FIELD_W, 0, FIELD_W, CORNER_R, CORNER_R);
+    ctx.lineTo(FIELD_W, FIELD_H - CORNER_R);
+    ctx.arcTo(FIELD_W, FIELD_H, FIELD_W - CORNER_R, FIELD_H, CORNER_R);
+    ctx.lineTo(CORNER_R, FIELD_H);
+    ctx.arcTo(0, FIELD_H, 0, FIELD_H - CORNER_R, CORNER_R);
+    ctx.lineTo(0, CORNER_R);
+    ctx.arcTo(0, 0, CORNER_R, 0, CORNER_R);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    goalFlash--;
+  }
+}
+
+function drawStealFlash() {
+  if (stealFlash > 0) {
+    const alpha = stealFlash / 30;
+    
+    ctx.strokeStyle = `rgba(255, 235, 59, ${alpha})`;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(FIELD_X + stealX, FIELD_Y + stealY, 40 * (1 - alpha * 0.5), 0, Math.PI * 2);
+    ctx.stroke();
+    
+    ctx.fillStyle = `rgba(255, 235, 59, ${alpha})`;
+    ctx.font = 'bold 20px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(stealText, FIELD_X + stealX, FIELD_Y + stealY - 50);
+    
+    stealFlash--;
+  }
+}
+
+function drawHUD() {
+  const rot = player.rotationSpeed;
+  const rotPercent = Math.min(1, Math.abs(rot) / ROTATE_SPEED);
+  
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.fillRect(FIELD_X + 10, FIELD_Y + 10, 200, 50);
+  ctx.strokeStyle = '#4fc3f7';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(FIELD_X + 10, FIELD_Y + 10, 200, 50);
+  
+  ctx.fillStyle = '#4fc3f7';
+  ctx.font = 'bold 12px Arial';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText('КРУЧУ КЛЮШКУ:', FIELD_X + 20, FIELD_Y + 18);
+  
+  ctx.fillStyle = '#333';
+  ctx.fillRect(FIELD_X + 20, FIELD_Y + 38, 160, 10);
+  
+  const barColor = rotPercent > 0.7 ? '#ff5252' : rotPercent > 0.3 ? '#ffeb3b' : '#4fc3f7';
+  ctx.fillStyle = barColor;
+  ctx.fillRect(FIELD_X + 20, FIELD_Y + 38, 160 * rotPercent, 10);
+  
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(FIELD_X + 20, FIELD_Y + 38, 160, 10);
+  
+  const tacticName = TACTIC_NAMES[cpu.tactic] || cpu.tactic;
+  const stateNames = { 
+    ATTACK: '⚔️ АТАКА', 
+    DEFEND: '🛡️ ЗАЩИТА', 
+    INTERCEPT: '🎯 ПЕРЕХВАТ',
+    DEFEND_OWN_GOAL: ' ЗАЩИТА ВОРОТ'
+  };
+  
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.fillRect(FIELD_X + FIELD_W - 200, FIELD_Y + 10, 190, 70);
+  ctx.strokeStyle = '#ff5252';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(FIELD_X + FIELD_W - 200, FIELD_Y + 10, 190, 70);
+  
+  ctx.fillStyle = '#ff5252';
+  ctx.font = 'bold 11px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(`ИИ: ${stateNames[cpu.state]}`, FIELD_X + FIELD_W - 105, FIELD_Y + 22);
+  ctx.fillText(`Тактика: ${tacticName}`, FIELD_X + FIELD_W - 105, FIELD_Y + 36);
+  
+  // Индикатор сложности
+  const diffColor = aiDifficulty < 30 ? '#4caf50' : aiDifficulty > 70 ? '#ff5252' : '#ffeb3b';
+  ctx.fillStyle = diffColor;
+  ctx.fillRect(FIELD_X + FIELD_W - 195, FIELD_Y + 44, 180 * (aiDifficulty / 100), 10);
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(FIELD_X + FIELD_W - 195, FIELD_Y + 44, 180, 10);
+  ctx.fillStyle = '#fff';
+  ctx.font = '9px Arial';
+  ctx.fillText(`Сложность: ${aiDifficulty}%`, FIELD_X + FIELD_W - 105, FIELD_Y + 52);
+  
+  // Индикатор скорости
+  const speedColor = aiSpeed < 30 ? '#4caf50' : aiSpeed > 70 ? '#ff5252' : '#ffeb3b';
+  ctx.fillStyle = speedColor;
+  ctx.fillRect(FIELD_X + FIELD_W - 195, FIELD_Y + 58, 180 * (aiSpeed / 100), 10);
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(FIELD_X + FIELD_W - 195, FIELD_Y + 58, 180, 10);
+  ctx.fillStyle = '#fff';
+  ctx.font = '9px Arial';
+  ctx.fillText(`Скорость: ${aiSpeed}%`, FIELD_X + FIELD_W - 105, FIELD_Y + 66);
+  
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.fillRect(FIELD_X + FIELD_W - 200, FIELD_Y + 85, 190, 20);
+  ctx.strokeStyle = '#4caf50';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(FIELD_X + FIELD_W - 200, FIELD_Y + 85, 190, 20);
+  ctx.fillStyle = '#4caf50';
+  ctx.font = '10px Arial';
+  ctx.fillText(`🚫 Автоголов: ${cpu.ownGoalAttempts}`, FIELD_X + FIELD_W - 105, FIELD_Y + 98);
+}
+
+function drawScoreboardOnCanvas() {
+  const boardW = 200;
+  const boardH = 40;
+  const boardX = CANVAS_W/2 - boardW/2;
+  const boardY = 20;
+  
+  ctx.fillStyle = '#000';
+  ctx.fillRect(boardX, boardY, boardW, boardH);
+  ctx.strokeStyle = '#ffeb3b';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(boardX, boardY, boardW, boardH);
+  
+  ctx.font = 'bold 24px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  
+  ctx.fillStyle = '#4fc3f7';
+  ctx.fillText(score1, boardX + 50, boardY + boardH/2);
+  
+  ctx.fillStyle = '#fff';
+  ctx.fillText(':', boardX + boardW/2, boardY + boardH/2);
+  
+  ctx.fillStyle = '#ff5252';
+  ctx.fillText(score2, boardX + boardW - 50, boardY + boardH/2);
+  
+  ctx.font = 'bold 9px Arial';
+  ctx.fillStyle = '#4fc3f7';
+  ctx.fillText('ВЫ', boardX + 50, boardY + 8);
+  ctx.fillStyle = '#ff5252';
+  ctx.fillText('CPU', boardX + boardW - 50, boardY + 8);
+  
+  ctx.fillStyle = '#ffeb3b';
+  ctx.font = 'bold 10px Arial';
+  ctx.fillText('● LIVE', boardX + boardW/2, boardY + 8);
+}
+
+function drawStands() {
+  ctx.save();
+  
+  const outerMargin = 10;
+  const outerX = FIELD_X - STAND_WIDTH - outerMargin;
+  const outerY = FIELD_Y - STAND_WIDTH - outerMargin;
+  const outerW = FIELD_W + 2 * (STAND_WIDTH + outerMargin);
+  const outerH = FIELD_H + 2 * (STAND_WIDTH + outerMargin);
+  const outerR = CORNER_R + STAND_WIDTH + outerMargin;
+  
+  const innerX = FIELD_X;
+  const innerY = FIELD_Y;
+  const innerW = FIELD_W;
+  const innerH = FIELD_H;
+  const innerR = CORNER_R;
+  
+  ctx.beginPath();
+  ctx.moveTo(outerX + outerR, outerY);
+  ctx.lineTo(outerX + outerW - outerR, outerY);
+  ctx.arcTo(outerX + outerW, outerY, outerX + outerW, outerY + outerR, outerR);
+  ctx.lineTo(outerX + outerW, outerY + outerH - outerR);
+  ctx.arcTo(outerX + outerW, outerY + outerH, outerX + outerW - outerR, outerY + outerH, outerR);
+  ctx.lineTo(outerX + outerR, outerY + outerH);
+  ctx.arcTo(outerX, outerY + outerH, outerX, outerY + outerH - outerR, outerR);
+  ctx.lineTo(outerX, outerY + outerR);
+  ctx.arcTo(outerX, outerY, outerX + outerR, outerY, outerR);
+  ctx.closePath();
+  
+  ctx.moveTo(innerX + innerR, innerY);
+  ctx.lineTo(innerX + innerW - innerR, innerY);
+  ctx.arcTo(innerX + innerW, innerY, innerX + innerW, innerY + innerR, innerR);
+  ctx.lineTo(innerX + innerW, innerY + innerH - innerR);
+  ctx.arcTo(innerX + innerW, innerY + innerH, innerX + innerW - innerR, innerY + innerH, innerR);
+  ctx.lineTo(innerX + innerR, innerY + innerH);
+  ctx.arcTo(innerX, innerY + innerH, innerX, innerY + innerH - innerR, innerR);
+  ctx.lineTo(innerX, innerY + innerR);
+  ctx.arcTo(innerX, innerY, innerX + innerR, innerY, innerR);
+  ctx.closePath();
+  
+  const standGrad = ctx.createRadialGradient(
+    FIELD_X + FIELD_W/2, FIELD_Y + FIELD_H/2, CORNER_R,
+    FIELD_X + FIELD_W/2, FIELD_Y + FIELD_H/2, outerR
+  );
+  standGrad.addColorStop(0, '#2d2d4a');
+  standGrad.addColorStop(1, '#1a1a2e');
+  ctx.fillStyle = standGrad;
+  ctx.fill('evenodd');
+  
+  ctx.restore();
+  
+  for (let row = 0; row < STAND_ROWS; row++) {
+    const y = FIELD_Y - 10 - row * ROW_HEIGHT;
+    const shade = 60 + row * 15;
+    ctx.fillStyle = `rgb(${shade}, ${shade}, ${shade + 20})`;
+    ctx.fillRect(FIELD_X + CORNER_R, y - 2, FIELD_W - 2 * CORNER_R, ROW_HEIGHT);
+    
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 1;
+    const sections = 8;
+    const sectionWidth = (FIELD_W - 2 * CORNER_R) / sections;
+    for (let s = 1; s < sections; s++) {
+      const sx = FIELD_X + CORNER_R + s * sectionWidth;
+      ctx.beginPath();
+      ctx.moveTo(sx, y - 2);
+      ctx.lineTo(sx, y + ROW_HEIGHT - 2);
+      ctx.stroke();
+    }
+  }
+  
+  for (let row = 0; row < STAND_ROWS; row++) {
+    const y = FIELD_Y + FIELD_H + 10 + row * ROW_HEIGHT;
+    const shade = 60 + row * 15;
+    ctx.fillStyle = `rgb(${shade}, ${shade}, ${shade + 20})`;
+    ctx.fillRect(FIELD_X + CORNER_R, y - 2, FIELD_W - 2 * CORNER_R, ROW_HEIGHT);
+    
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 1;
+    const sections = 8;
+    const sectionWidth = (FIELD_W - 2 * CORNER_R) / sections;
+    for (let s = 1; s < sections; s++) {
+      const sx = FIELD_X + CORNER_R + s * sectionWidth;
+      ctx.beginPath();
+      ctx.moveTo(sx, y - 2);
+      ctx.lineTo(sx, y + ROW_HEIGHT - 2);
+      ctx.stroke();
+    }
+  }
+  
+  for (let row = 0; row < STAND_ROWS; row++) {
+    const x = FIELD_X - 10 - row * ROW_HEIGHT;
+    const shade = 60 + row * 15;
+    ctx.fillStyle = `rgb(${shade}, ${shade}, ${shade + 20})`;
+    ctx.fillRect(x - 2, FIELD_Y + CORNER_R, ROW_HEIGHT, FIELD_H - 2 * CORNER_R);
+    
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 1;
+    const sections = 8;
+    const sectionHeight = (FIELD_H - 2 * CORNER_R) / sections;
+    for (let s = 1; s < sections; s++) {
+      const sy = FIELD_Y + CORNER_R + s * sectionHeight;
+      ctx.beginPath();
+      ctx.moveTo(x - 2, sy);
+      ctx.lineTo(x + ROW_HEIGHT - 2, sy);
+      ctx.stroke();
+    }
+  }
+  
+  for (let row = 0; row < STAND_ROWS; row++) {
+    const x = FIELD_X + FIELD_W + 10 + row * ROW_HEIGHT;
+    const shade = 60 + row * 15;
+    ctx.fillStyle = `rgb(${shade}, ${shade}, ${shade + 20})`;
+    ctx.fillRect(x - 2, FIELD_Y + CORNER_R, ROW_HEIGHT, FIELD_H - 2 * CORNER_R);
+    
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 1;
+    const sections = 8;
+    const sectionHeight = (FIELD_H - 2 * CORNER_R) / sections;
+    for (let s = 1; s < sections; s++) {
+      const sy = FIELD_Y + CORNER_R + s * sectionHeight;
+      ctx.beginPath();
+      ctx.moveTo(x - 2, sy);
+      ctx.lineTo(x + ROW_HEIGHT - 2, sy);
+      ctx.stroke();
+    }
+  }
+  
+  const cornerCenters = [
+    { cx: FIELD_X + CORNER_R, cy: FIELD_Y + CORNER_R, angleStart: Math.PI, angleEnd: 1.5 * Math.PI },
+    { cx: FIELD_X + FIELD_W - CORNER_R, cy: FIELD_Y + CORNER_R, angleStart: 1.5 * Math.PI, angleEnd: 2 * Math.PI },
+    { cx: FIELD_X + CORNER_R, cy: FIELD_Y + FIELD_H - CORNER_R, angleStart: 0.5 * Math.PI, angleEnd: Math.PI },
+    { cx: FIELD_X + FIELD_W - CORNER_R, cy: FIELD_Y + FIELD_H - CORNER_R, angleStart: 0, angleEnd: 0.5 * Math.PI }
+  ];
+  
+  cornerCenters.forEach(corner => {
+    for (let row = 0; row < STAND_ROWS; row++) {
+      const radius = CORNER_R + 10 + row * ROW_HEIGHT;
+      const shade = 60 + row * 15;
+      
+      ctx.strokeStyle = `rgb(${shade}, ${shade}, ${shade + 20})`;
+      ctx.lineWidth = ROW_HEIGHT;
+      ctx.beginPath();
+      ctx.arc(corner.cx, corner.cy, radius, corner.angleStart, corner.angleEnd);
+      ctx.stroke();
+      
+      ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+      ctx.lineWidth = 1;
+      const sections = 3;
+      const angleStep = (corner.angleEnd - corner.angleStart) / sections;
+      for (let s = 1; s < sections; s++) {
+        const angle = corner.angleStart + s * angleStep;
+        const x1 = corner.cx + Math.cos(angle) * (radius - ROW_HEIGHT/2);
+        const y1 = corner.cy + Math.sin(angle) * (radius - ROW_HEIGHT/2);
+        const x2 = corner.cx + Math.cos(angle) * (radius + ROW_HEIGHT/2);
+        const y2 = corner.cy + Math.sin(angle) * (radius + ROW_HEIGHT/2);
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+    }
+  });
+}
+
+function drawSpectators() {
+  const time = frameCount * 0.05;
+  const jumping = crowdJumpTime > 0;
+  const jumpPhase = jumping ? Math.sin(frameCount * 0.3) * 4 : 0;
+  
+  spectators.forEach(s => {
+    const sway = Math.sin(time + s.phase) * 0.8;
+    
+    const waveActive = (frameCount % 600) < 180;
+    let waveOffset = 0;
+    if (waveActive) {
+      if (s.zone.includes('straight')) {
+        if (s.zone === 'top-straight' || s.zone === 'bottom-straight') {
+          const wavePos = (frameCount % 600) / 180 * CANVAS_W;
+          const distToWave = Math.abs(s.x - wavePos);
+          if (distToWave < 60) {
+            waveOffset = Math.sin((1 - distToWave / 60) * Math.PI) * 3;
+          }
+        } else {
+          const wavePos = (frameCount % 600) / 180 * FIELD_H;
+          const distToWave = Math.abs(s.baseY - FIELD_Y - wavePos);
+          if (distToWave < 60) {
+            waveOffset = Math.sin((1 - distToWave / 60) * Math.PI) * 3;
+          }
+        }
+      }
+    }
+    
+    let jumpOffset = 0;
+    if (jumping) {
+      jumpOffset = jumpPhase * (0.5 + Math.random() * 0.5);
+    }
+    
+    let x, y;
+    if ((s.zone === 'left-straight' || s.zone === 'right-straight')) {
+      x = s.x + sway + (jumping ? jumpPhase * 0.5 : 0);
+      y = s.baseY - waveOffset;
+    } else {
+      x = s.x + sway;
+      y = s.baseY - waveOffset - jumpOffset;
+    }
+    
+    const size = s.size;
+    
+    ctx.fillStyle = s.shirt;
+    ctx.fillRect(x - 3 * size, y - 2 * size, 6 * size, 6 * size);
+    
+    ctx.fillStyle = s.skin;
+    ctx.beginPath();
+    ctx.arc(x, y - 4 * size, 2.5 * size, 0, Math.PI * 2);
+    ctx.fill();
+    
+    if (jumping && Math.random() < 0.3) {
+      ctx.strokeStyle = s.skin;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x - 3 * size, y - 1 * size);
+      ctx.lineTo(x - 5 * size, y - 6 * size);
+      ctx.moveTo(x + 3 * size, y - 1 * size);
+      ctx.lineTo(x + 5 * size, y - 6 * size);
+      ctx.stroke();
+    }
+  });
+}
+
+function drawBanners() {
+  const banners = ['GAME', '🏒 HOCKEY', 'CHAMPIONSHIP', '⚡ LIVE ', 'PLAY OFF', '★ FINAL ★', 'STIGA', '🏒 HOCKEY', 'STIGA', '🏒 HOCKEY'];
+  
+  const bannerY_top = FIELD_Y - 12;
+  const bannerY_bottom = FIELD_Y + FIELD_H + 2;
+  const bannerH = 10;
+  const bannerWidth = (FIELD_W - 2 * CORNER_R) / banners.length;
+  
+  banners.forEach((text, i) => {
+    const x = FIELD_X + CORNER_R + i * bannerWidth;
+    const color = i % 2 === 0 ? '#d32f2f' : '#1976d2';
+    ctx.fillStyle = color;
+    ctx.fillRect(x, bannerY_top, bannerWidth, bannerH);
+    ctx.fillRect(x, bannerY_bottom, bannerWidth, bannerH);
+    
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 8px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, x + bannerWidth / 2, bannerY_top + bannerH / 2);
+    ctx.fillText(text, x + bannerWidth / 2, bannerY_bottom + bannerH / 2);
+  });
+}
+
+function gameLoop() {
+  frameCount++;
+  
+  if (!paused) {
+    updatePlayer();
+    updateCPU();
+    updatePuck();
+    if (crowdJumpTime > 0) crowdJumpTime--;
+  }
+  
+  ctx.fillStyle = '#0a0a15';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  
+  drawStands();
+  drawSpectators();
+  drawBanners();
+  drawScoreboardOnCanvas();
+  
+  drawField();
+  drawPlayer(cpu);
+  drawPlayer(player);
+  drawPuck();
+  drawGoalFlash();
+  drawStealFlash();
+  if (hudVisible) drawHUD();
+  
+  requestAnimationFrame(gameLoop);
+}
+
+resetPositions();
+updateScoreboard();
+gameLoop();
+</script>
+
+</body>
+</html>
