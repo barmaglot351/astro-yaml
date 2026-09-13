@@ -61,12 +61,71 @@
   }
   function take(p) {
     puck.owner = p; puck.vx = puck.vy = 0; p.held = 0;
+    p.routeY = p.y < 315 ? 105 : p.y > 385 ? 595 : (Math.random() < 0.5 ? 105 : 595);
+    p.attackPlan = Math.random() < 0.7 ? 'cycle' : 'direct';
+  }
+  function segmentClearance(a, b, opponents) {
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const lengthSquared = dx * dx + dy * dy || 1;
+    let clearance = 180;
+    for (const o of opponents) {
+      const t = clamp(((o.x - a.x) * dx + (o.y - a.y) * dy) / lengthSquared, 0, 1);
+      clearance = Math.min(clearance, Math.hypot(o.x - a.x - t * dx, o.y - a.y - t * dy));
+    }
+    return clearance;
+  }
+  function supportTarget(p, owner, squad, opponents, goalX, dir, dt) {
+    p.supportThink = (p.supportThink || 0) - dt;
+    if (p.supportOwner === owner && p.supportThink > 0 && Number.isFinite(p.supportX)) {
+      return {x: p.supportX, y: p.supportY};
+    }
+
+    // Нападающие открываются на разных глубинах у ворот, защитники — эшелоном около синей линии.
+    const zones = {
+      1: {depths: [115, 190, 270], ys: [105, 155, 215]},
+      2: {depths: [145, 230, 315], ys: [275, 350, 425]},
+      3: {depths: [115, 190, 270], ys: [485, 545, 595]},
+      4: {depths: [280, 340, 400], ys: [190, 250, 310]},
+      5: {depths: [280, 340, 400], ys: [390, 460, 520]}
+    };
+    const zone = zones[p.number] || zones[2];
+    let best = null, bestScore = -Infinity;
+    for (const depth of zone.depths) {
+      for (const y of zone.ys) {
+        const candidate = {x: goalX - dir * depth, y};
+        const nearestOpponent = opponents.length
+          ? Math.min(...opponents.map(o => distance(candidate, o))) : 180;
+        const otherMates = squad.filter(m => m !== p && m !== owner);
+        const nearestMate = otherMates.length ? Math.min(...otherMates.map(m => {
+          const target = m.supportOwner === owner && Number.isFinite(m.supportX)
+            ? {x: m.supportX, y: m.supportY} : m;
+          return distance(candidate, target);
+        })) : 180;
+        const verticalCrowding = otherMates.reduce((penalty, m) => {
+          const mx = m.supportOwner === owner && Number.isFinite(m.supportX) ? m.supportX : m.x;
+          return penalty + Math.max(0, 70 - Math.abs(candidate.x - mx));
+        }, 0);
+        const passingLane = segmentClearance(owner, candidate, opponents);
+        const score = Math.min(nearestOpponent, 190) * 1.35
+          + Math.min(nearestMate, 180) * 0.55
+          + Math.min(passingLane, 120) * 0.9
+          - distance(p, candidate) * 0.12
+          - verticalCrowding * 0.9
+          + Math.random() * 8;
+        if (score > bestScore) { bestScore = score; best = candidate; }
+      }
+    }
+    p.supportOwner = owner;
+    p.supportX = best.x;
+    p.supportY = best.y;
+    p.supportThink = 0.35 + Math.random() * 0.25;
+    return best;
   }
   function resetPositions() {
     puck.x = 600; puck.y = 350; puck.vx = puck.vy = 0; puck.owner = null; puck.lock = 0;
     skaters.forEach(p => {
       if (!manual(p)) { p.x = p.homeX; p.y = p.homeY; }
-      p.cooldown = 0; p.held = 0;
+      p.cooldown = 0; p.held = 0; p.supportOwner = null; p.supportThink = 0;
     });
   }
   function paint() {
@@ -95,14 +154,16 @@
       const chasers = squad.slice().sort((a, b) => distance(a, puck) - distance(b, puck));
       const dir = team === 'red' ? 1 : -1;
       const goalX = team === 'red' ? 1100 : 100;
+      const blueLineX = team === 'red' ? 760 : 440;
+      const behindNetX = goalX + dir * 35;
       for (const p of squad) {
         if (puck.owner === p) {
           p.held += dt;
           const pressure = opponent.filter(o => o.number && distance(o, p) < 110).length;
-          const mates = squad.filter(m => m !== p && distance(m, p) > 70 && distance(m, p) < 420);
+          const mates = squad.filter(m => m !== p && distance(m, p) > 85 && distance(m, p) < 520);
           // Оцениваем продвижение, свободу получателя и перекрытие линии паса.
           const passScore = m => {
-            let score = (m.x - p.x) * dir * 0.45;
+            let score = (m.x - p.x) * dir * 0.38 + Math.abs(m.y - p.y) * 0.12;
             for (const o of opponent) {
               if (distance(m, o) < 80) score -= 90;
               const dx = m.x - p.x, dy = m.y - p.y;
@@ -112,30 +173,53 @@
             return score;
           };
           mates.sort((a, b) => passScore(b) - passScore(a));
-          if (p.held > 0.65 && mates.length && passScore(mates[0]) > -80 && (pressure || p.held > 1.7)) {
-            release(p, mates[0].x, mates[0].y + 8, 430, 'пас игроку ' + mates[0].number);
-          } else if (p.held > 0.8 && Math.abs(goalX - p.x) < 320 && Math.abs(p.y - 350) < 170) {
+          const behindNet = Math.abs(p.x - behindNetX) < 38 && Math.abs(p.y - 350) > 70;
+          const pointMen = squad.filter(m => m !== p && m.number >= 4);
+          pointMen.sort((a, b) => {
+            const spaceA = Math.min(...opponent.map(o => distance(a, o)));
+            const spaceB = Math.min(...opponent.map(o => distance(b, o)));
+            return spaceB - spaceA;
+          });
+          const blueLineShot = p.number >= 4 && Math.abs(p.x - blueLineX) < 105;
+          const cycling = p.number <= 3 && p.attackPlan === 'cycle';
+          if (behindNet && p.held > 0.3 && pointMen.length) {
+            release(p, pointMen[0].x, pointMen[0].y + 8, 560,
+              'пас из-за ворот на синюю линию игроку ' + pointMen[0].number);
+          } else if (blueLineShot && p.held > 0.38) {
             const goalie = opponent.find(o => o.number === 0);
             const aim = goalie && goalie.y + 8 < 350 ? 383 : 317;
             const shotSpeed = SHOT_SPEED_MIN + Math.random() * (SHOT_SPEED_MAX - SHOT_SPEED_MIN);
-            release(p, goalX, aim + (Math.random() - 0.5) * 14, shotSpeed, 'бросок по воротам!');
+            release(p, goalX, aim + (Math.random() - 0.5) * 18, shotSpeed, 'бросок с синей линии!');
+          } else if (!cycling && p.held > 0.72 && Math.abs(goalX - p.x) < 330 && Math.abs(p.y - 350) < 175) {
+            const goalie = opponent.find(o => o.number === 0);
+            const aim = goalie && goalie.y + 8 < 350 ? 383 : 317;
+            const shotSpeed = SHOT_SPEED_MIN + Math.random() * (SHOT_SPEED_MAX - SHOT_SPEED_MIN);
+            release(p, goalX, aim + (Math.random() - 0.5) * 18, shotSpeed, 'бросок по воротам!');
+          } else if (p.held > 0.48 && mates.length && passScore(mates[0]) > -90 && (pressure || (!cycling && p.held > 1.15))) {
+            release(p, mates[0].x, mates[0].y + 8, 485, 'пас игроку ' + mates[0].number);
+          } else if (cycling) {
+            const inAttackZone = Math.abs(goalX - p.x) < 340;
+            const behindY = p.routeY < 350 ? 245 : 455;
+            const advanceX = clamp(p.x + dir * 180, 80, 1120);
+            move(p, inAttackZone ? behindNetX : advanceX,
+              inAttackZone ? behindY : p.routeY, 138, dt);
           } else {
             move(p, goalX - dir * 135, 350 + Math.sin(p.number * 2) * 65, 124, dt);
           }
         } else if (!puck.owner || puck.owner.team !== team) {
-          if (p === chasers[0] || p === chasers[1]) {
+          if (p === chasers[0]) {
             move(p, puck.x + puck.vx * 0.12, puck.y + puck.vy * 0.12 - 8, 154, dt);
           } else {
             const homeGoal = team === 'red' ? 100 : 1100;
-            const mark = opponent.filter(o => o.number)[p.number % Math.max(1, opponent.filter(o => o.number).length)];
+            const opponentSkaters = opponent.filter(o => o.number);
+            const mark = opponentSkaters[(p.number - 1) % Math.max(1, opponentSkaters.length)];
             move(p, mark ? mark.x * 0.6 + homeGoal * 0.4 : p.homeX,
               mark ? mark.y : p.homeY, 115, dt);
           }
         } else {
           const owner = puck.owner;
-          const lane = (p.number % 3 - 1) * 140;
-          move(p, clamp(owner.x + dir * (p.number > 3 ? -140 : 160), 200, 1000),
-            clamp(350 + lane, 110, 590), 132, dt);
+          const target = supportTarget(p, owner, squad, opponent.filter(o => o.number), goalX, dir, dt);
+          move(p, target.x, target.y, p.number <= 3 ? 138 : 132, dt);
         }
       }
       const keeper = live.find(p => p.team === team && p.number === 0 && !manual(p));
@@ -158,13 +242,14 @@
         }
       }
     }
-    // Небольшое расталкивание не даёт полевым игрокам собираться в одну точку.
+    // Партнёры держат дистанцию заметно строже, чем соперники в единоборстве.
     for (let i = 0; i < live.length; i++) {
       for (let j = i + 1; j < live.length; j++) {
         const a = live[i], b = live[j];
         const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
-        if (len >= 25) continue;
-        const push = Math.min((25 - len) * 0.5, 65 * dt);
+        const gap = a.team === b.team ? 62 : 34;
+        if (len >= gap) continue;
+        const push = Math.min((gap - len) * 0.5, 95 * dt);
         const nx = len > 0.01 ? dx / len : 1, ny = len > 0.01 ? dy / len : 0;
         if (a.number && enabled[a.team] && !manual(a)) { a.x -= nx * push; a.y -= ny * push; contain(a, 25, false); }
         if (b.number && enabled[b.team] && !manual(b)) { b.x += nx * push; b.y += ny * push; contain(b, 25, false); }
