@@ -150,6 +150,7 @@
     puck.owner = p; puck.vx = puck.vy = 0; p.held = 0;
     p.routeY = p.y < 315 ? 105 : p.y > 385 ? 595 : (Math.random() < 0.5 ? 105 : 595);
     p.attackPlan = Math.random() < 0.7 ? 'cycle' : 'direct';
+    p.creaseDecision = null;
   }
   function segmentClearance(a, b, opponents) {
     const dx = b.x - a.x, dy = b.y - a.y;
@@ -246,13 +247,29 @@
       for (const p of squad) {
         if (puck.owner === p) {
           p.held += dt;
-          const pressure = opponent.filter(o => o.number && distance(o, p) < 110).length;
+          const opponentSkaters = opponent.filter(o => o.number);
+          const pressure = opponentSkaters.filter(o => distance(o, p) < 110).length;
           const mates = squad.filter(m => m !== p && distance(m, p) > 85 && distance(m, p) < 520);
-          // Оцениваем продвижение, свободу получателя и перекрытие линии паса.
+          const forwardRoom = opponentSkaters.reduce((room, o) => {
+            const forward = (o.x - p.x) * dir;
+            const lateral = Math.abs(o.y - p.y);
+            return forward > 0 && forward < 280 && lateral < 90 ? Math.min(room, forward) : room;
+          }, Infinity);
+          const canCarryForward = forwardRoom > 165;
+          // Пас вперёд ценнее: учитываем близость к воротам, свободу игрока и чистоту коридора.
           const passScore = m => {
-            let score = (m.x - p.x) * dir * 0.38 + Math.abs(m.y - p.y) * 0.12;
-            for (const o of opponent) {
-              if (distance(m, o) < 80) score -= 90;
+            const progress = (m.x - p.x) * dir;
+            const openness = opponentSkaters.length
+              ? Math.min(...opponentSkaters.map(o => distance(m, o))) : 200;
+            const lane = segmentClearance(p, m, opponentSkaters);
+            let score = progress * 0.82
+              + Math.min(openness, 200) * 0.72
+              + Math.min(lane, 130) * 0.85
+              - distance(p, m) * 0.06;
+            if (progress > 25) score += 55;
+            if (progress < -25) score -= 190 + Math.abs(progress) * 0.45;
+            for (const o of opponentSkaters) {
+              if (distance(m, o) < 80) score -= 110;
               const dx = m.x - p.x, dy = m.y - p.y;
               const t = clamp(((o.x - p.x) * dx + (o.y - p.y) * dy) / (dx * dx + dy * dy), 0, 1);
               if (t > 0.12 && t < 0.9 && Math.hypot(o.x - p.x - t * dx, o.y - p.y - t * dy) < 28) score -= 120;
@@ -260,6 +277,8 @@
             return score;
           };
           mates.sort((a, b) => passScore(b) - passScore(a));
+          const forwardMates = mates.filter(m => (m.x - p.x) * dir > 25);
+          const passTarget = forwardMates[0] || (pressure ? mates[0] : null);
           const behindNet = Math.abs(p.x - behindNetX) < 38 && Math.abs(p.y - 350) > 70;
           const pointMen = squad.filter(m => m !== p && m.number >= 4);
           pointMen.sort((a, b) => {
@@ -267,23 +286,37 @@
             const spaceB = Math.min(...opponent.map(o => distance(b, o)));
             return spaceB - spaceA;
           });
+          const cycleReceiver = pointMen[0] || mates[0];
           const blueLineShot = p.number >= 4 && Math.abs(p.x - blueLineX) < 105;
-          const cycling = p.number <= 3 && p.attackPlan === 'cycle';
-          if (behindNet && p.held > 0.3 && pointMen.length) {
-            release(p, pointMen[0].x, pointMen[0].y + 8, 560,
-              'пас из-за ворот на синюю линию игроку ' + pointMen[0].number);
+          const leadsAttack = squad.every(m => m === p || (p.x - m.x) * dir >= -10);
+          const nearCrease = Math.abs(goalX - p.x) < 155 && Math.abs(p.y - 350) < 130;
+          if (!nearCrease) p.creaseDecision = null;
+          if (nearCrease && leadsAttack && !p.creaseDecision) {
+            p.creaseDecision = Math.random() < 0.7 ? 'shoot' : 'cycle';
+          }
+          const cycling = p.creaseDecision === 'cycle' ||
+            (!p.creaseDecision && p.number <= 3 && p.attackPlan === 'cycle');
+          if (behindNet && p.held > 0.3 && cycleReceiver) {
+            release(p, cycleReceiver.x, cycleReceiver.y + 8, 560,
+              'пас из-за ворот игроку ' + cycleReceiver.number);
           } else if (blueLineShot && p.held > 0.38) {
             const goalie = opponent.find(o => o.number === 0);
             const aim = goalie && goalie.y + 8 < 350 ? 383 : 317;
             const shotSpeed = SHOT_SPEED_MIN + Math.random() * (SHOT_SPEED_MAX - SHOT_SPEED_MIN);
             release(p, goalX, aim + (Math.random() - 0.5) * 18, shotSpeed, 'бросок с синей линии!');
+          } else if (p.creaseDecision === 'shoot' && p.held > 0.3) {
+            const goalie = opponent.find(o => o.number === 0);
+            const aim = goalie && goalie.y + 8 < 350 ? 383 : 317;
+            const shotSpeed = SHOT_SPEED_MIN + Math.random() * (SHOT_SPEED_MAX - SHOT_SPEED_MIN);
+            release(p, goalX, aim + (Math.random() - 0.5) * 18, shotSpeed, 'бросок с пятачка!');
           } else if (!cycling && p.held > 0.72 && Math.abs(goalX - p.x) < 330 && Math.abs(p.y - 350) < 175) {
             const goalie = opponent.find(o => o.number === 0);
             const aim = goalie && goalie.y + 8 < 350 ? 383 : 317;
             const shotSpeed = SHOT_SPEED_MIN + Math.random() * (SHOT_SPEED_MAX - SHOT_SPEED_MIN);
             release(p, goalX, aim + (Math.random() - 0.5) * 18, shotSpeed, 'бросок по воротам!');
-          } else if (p.held > 0.48 && mates.length && passScore(mates[0]) > -90 && (pressure || (!cycling && p.held > 1.15))) {
-            release(p, mates[0].x, mates[0].y + 8, 485, 'пас игроку ' + mates[0].number);
+          } else if (p.creaseDecision !== 'cycle' && p.held > 0.62 && passTarget && passScore(passTarget) > -70 &&
+              (pressure || (!canCarryForward && p.held > 0.95) || p.held > 2.4)) {
+            release(p, passTarget.x, passTarget.y + 8, 485, 'пас игроку ' + passTarget.number);
           } else if (cycling) {
             const inAttackZone = Math.abs(goalX - p.x) < 340;
             const behindY = p.routeY < 350 ? 245 : 455;
