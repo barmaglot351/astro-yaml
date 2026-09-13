@@ -823,6 +823,12 @@
     var pt = getMousePos(e);
     var nx = pt.x - offsetX;
     var ny = pt.y - offsetY;
+    if (window.HockeyAI && typeof window.HockeyAI.constrainPlayer === 'function') {
+      var current = draggedPlayer.getAttribute('transform').match(/[-\d.]+/g).map(Number);
+      var constrained = window.HockeyAI.constrainPlayer(nx, ny, current[0], current[1]);
+      nx = constrained.x;
+      ny = constrained.y;
+    }
     draggedPlayer.setAttribute('transform', 'translate(' + nx + ', ' + ny + ')');
   }
 

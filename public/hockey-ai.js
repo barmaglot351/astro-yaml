@@ -12,6 +12,18 @@
   const puck = {x: 600, y: 350, vx: 0, vy: 0, owner: null, lock: 0};
   const SHOT_SPEED_MIN = 1050;
   const SHOT_SPEED_MAX = 1200;
+  const goalCages = [
+    {x1: 70, x2: 100, y1: 300, y2: 400},
+    {x1: 1100, x2: 1130, y1: 300, y2: 400}
+  ];
+  const goalFrameRects = [
+    {x1: 68, x2: 74, y1: 297, y2: 403},
+    {x1: 70, x2: 102, y1: 297, y2: 304},
+    {x1: 70, x2: 102, y1: 396, y2: 403},
+    {x1: 1126, x2: 1132, y1: 297, y2: 403},
+    {x1: 1098, x2: 1130, y1: 297, y2: 304},
+    {x1: 1098, x2: 1130, y1: 396, y2: 403}
+  ];
   // Судья не входит в skaters: не сталкивается, не отбирает и не отбивает шайбу.
   const refereeNode = document.getElementById('referee');
   const referee = {x: 600, y: 110, vx: 0, vy: 0, phase: -Math.PI / 2, think: 0};
@@ -46,12 +58,87 @@
       if (bounce && dot > 0) { body.vx -= 1.78 * dot * nx; body.vy -= 1.78 * dot * ny; }
     }
   }
+  function segmentBoxEntry(x0, y0, x1, y1, box) {
+    let enter = 0, exit = 1;
+    for (const [start, delta, lo, hi] of [[x0, x1 - x0, box.x1, box.x2], [y0, y1 - y0, box.y1, box.y2]]) {
+      if (Math.abs(delta) < 0.0001) {
+        if (start < lo || start > hi) return null;
+        continue;
+      }
+      let a = (lo - start) / delta, b = (hi - start) / delta;
+      if (a > b) [a, b] = [b, a];
+      enter = Math.max(enter, a); exit = Math.min(exit, b);
+      if (enter > exit) return null;
+    }
+    return enter >= 0 && enter <= 1 ? enter : null;
+  }
+  function keepOutOfGoalCages(body, radius, oldX, oldY) {
+    for (const cage of goalCages) {
+      const box = {x1: cage.x1 - radius, x2: cage.x2 + radius,
+        y1: cage.y1 - radius, y2: cage.y2 + radius};
+      const targetInside = body.x > box.x1 && body.x < box.x2 && body.y > box.y1 && body.y < box.y2;
+      const oldStrictlyOutside = Number.isFinite(oldX) &&
+        (oldX < box.x1 || oldX > box.x2 || oldY < box.y1 || oldY > box.y2);
+      if (oldStrictlyOutside) {
+        const entry = segmentBoxEntry(oldX, oldY, body.x, body.y, box);
+        if (entry !== null) {
+          const safe = Math.max(0, entry - 0.002);
+          body.x = oldX + (body.x - oldX) * safe;
+          body.y = oldY + (body.y - oldY) * safe;
+          continue;
+        }
+        if (!targetInside) continue;
+      }
+      if (!targetInside) continue;
+      const exits = [
+        {distance: body.x - box.x1, axis: 'x', value: box.x1},
+        {distance: box.x2 - body.x, axis: 'x', value: box.x2},
+        {distance: body.y - box.y1, axis: 'y', value: box.y1},
+        {distance: box.y2 - body.y, axis: 'y', value: box.y2}
+      ].sort((a, b) => a.distance - b.distance);
+      body[exits[0].axis] = exits[0].value;
+    }
+  }
+  function collidePuckWithGoalFrames() {
+    const radius = 8;
+    for (const box of goalFrameRects) {
+      const nearestX = clamp(puck.x, box.x1, box.x2);
+      const nearestY = clamp(puck.y, box.y1, box.y2);
+      let dx = puck.x - nearestX, dy = puck.y - nearestY;
+      let length = Math.hypot(dx, dy);
+      if (length >= radius) continue;
+      let nx, ny;
+      if (length > 0.001) {
+        nx = dx / length; ny = dy / length;
+      } else {
+        const exits = [
+          {distance: puck.x - box.x1, nx: -1, ny: 0, x: box.x1 - radius, y: puck.y},
+          {distance: box.x2 - puck.x, nx: 1, ny: 0, x: box.x2 + radius, y: puck.y},
+          {distance: puck.y - box.y1, nx: 0, ny: -1, x: puck.x, y: box.y1 - radius},
+          {distance: box.y2 - puck.y, nx: 0, ny: 1, x: puck.x, y: box.y2 + radius}
+        ].sort((a, b) => a.distance - b.distance);
+        nx = exits[0].nx; ny = exits[0].ny;
+        puck.x = exits[0].x; puck.y = exits[0].y; length = radius;
+      }
+      if (length < radius) {
+        puck.x = nearestX + nx * radius;
+        puck.y = nearestY + ny * radius;
+      }
+      const impact = puck.vx * nx + puck.vy * ny;
+      if (impact < 0) {
+        puck.vx -= 1.72 * impact * nx;
+        puck.vy -= 1.72 * impact * ny;
+      }
+    }
+  }
   function move(p, x, y, speed, dt) {
     if (manual(p)) return;
+    const oldX = p.x, oldY = p.y;
     const dx = x - p.x, dy = y - p.y, len = Math.hypot(dx, dy);
     const step = Math.min(len, speed * dt);
     if (len > 0) { p.x += dx / len * step; p.y += dy / len * step; }
     contain(p, 25, false);
+    keepOutOfGoalCages(p, 25, oldX, oldY);
   }
   function release(p, x, y, speed, label) {
     const dx = x - puck.x, dy = y - puck.y, len = Math.hypot(dx, dy) || 1;
@@ -211,10 +298,23 @@
             move(p, puck.x + puck.vx * 0.12, puck.y + puck.vy * 0.12 - 8, 154, dt);
           } else {
             const homeGoal = team === 'red' ? 100 : 1100;
-            const opponentSkaters = opponent.filter(o => o.number);
-            const mark = opponentSkaters[(p.number - 1) % Math.max(1, opponentSkaters.length)];
-            move(p, mark ? mark.x * 0.6 + homeGoal * 0.4 : p.homeX,
-              mark ? mark.y : p.homeY, 115, dt);
+            const lanes = {1: 135, 2: 315, 3: 565, 4: 225, 5: 470};
+            let targetX, targetY;
+            if (!puck.owner) {
+              // За свободной шайбой идёт один игрок, остальные образуют диагональ поддержки.
+              const depths = {1: 85, 2: 150, 3: 220, 4: 295, 5: 365};
+              targetX = puck.x - dir * depths[p.number];
+              const homeLimit = homeGoal + dir * (80 + p.number * 28);
+              targetX = dir > 0 ? Math.max(targetX, homeLimit) : Math.min(targetX, homeLimit);
+              targetY = lanes[p.number] + (puck.y - 350) * 0.08;
+            } else {
+              // Зонная оборона зависит только от владельца шайбы и не зеркалит соперников попарно.
+              const depthShare = {1: 0.62, 2: 0.49, 3: 0.57, 4: 0.28, 5: 0.36};
+              targetX = homeGoal + (puck.owner.x - homeGoal) * depthShare[p.number]
+                + dir * (p.number - 3) * 13;
+              targetY = lanes[p.number] + (puck.owner.y - 350) * 0.14;
+            }
+            move(p, clamp(targetX, 150, 1050), clamp(targetY, 105, 595), 118, dt);
           }
         } else {
           const owner = puck.owner;
@@ -247,12 +347,18 @@
       for (let j = i + 1; j < live.length; j++) {
         const a = live[i], b = live[j];
         const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
+        if (a.team === b.team && Math.abs(dx) < 52 && Math.abs(dy) > 38 && Math.abs(dy) < 250) {
+          const side = Math.abs(dx) > 0.5 ? Math.sign(dx) : ((a.number + b.number) % 2 ? 1 : -1);
+          const lateral = Math.min((52 - Math.abs(dx)) * 0.5, 82 * dt);
+          if (a.number && enabled[a.team] && !manual(a)) { a.x -= side * lateral; contain(a, 25, false); keepOutOfGoalCages(a, 25); }
+          if (b.number && enabled[b.team] && !manual(b)) { b.x += side * lateral; contain(b, 25, false); keepOutOfGoalCages(b, 25); }
+        }
         const gap = a.team === b.team ? 62 : 34;
         if (len >= gap) continue;
         const push = Math.min((gap - len) * 0.5, 95 * dt);
         const nx = len > 0.01 ? dx / len : 1, ny = len > 0.01 ? dy / len : 0;
-        if (a.number && enabled[a.team] && !manual(a)) { a.x -= nx * push; a.y -= ny * push; contain(a, 25, false); }
-        if (b.number && enabled[b.team] && !manual(b)) { b.x += nx * push; b.y += ny * push; contain(b, 25, false); }
+        if (a.number && enabled[a.team] && !manual(a)) { a.x -= nx * push; a.y -= ny * push; contain(a, 25, false); keepOutOfGoalCages(a, 25); }
+        if (b.number && enabled[b.team] && !manual(b)) { b.x += nx * push; b.y += ny * push; contain(b, 25, false); keepOutOfGoalCages(b, 25); }
       }
     }
     if (puck.owner) {
@@ -294,6 +400,7 @@
             resetPositions(); faceoff = 1.5; return;
           }
         }
+        collidePuckWithGoalFrames();
         contain(puck, 8, true);
       }
     }
@@ -348,6 +455,12 @@
     refereeNode.setAttribute('transform', 'translate(' + referee.x.toFixed(2) + ', ' + referee.y.toFixed(2) + ')');
   }
   window.HockeyAI = {
+    constrainPlayer(x, y, oldX, oldY) {
+      const body = {x, y};
+      contain(body, 25, false);
+      keepOutOfGoalCages(body, 25, oldX, oldY);
+      return body;
+    },
     start() {
       enabled.red = true; enabled.blue = true; paused = false; faceoff = 0.7;
       for (const team of ['red', 'blue']) {
