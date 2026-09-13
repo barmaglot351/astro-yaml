@@ -33,23 +33,6 @@
     font-weight: 900;
   }
   .subtitle { font-size: 0.85rem; color: #888; margin-bottom: 10px; letter-spacing: 2px; }
-  .scoreboard { display: flex; gap: 30px; margin-bottom: 10px; font-size: 1.4rem; font-weight: bold; }
-  .score {
-    height: 44px;
-    padding: 0 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 auto;
-    white-space: nowrap;
-    border-radius: 10px;
-    background: rgba(255,255,255,0.05);
-    border: 2px solid;
-    transition: box-shadow 0.3s, background-color 0.3s;
-  }
-  .score.blue { width: 120px; border-color: #4fc3f7; color: #4fc3f7; box-shadow: 0 0 20px rgba(79,195,247,0.3); }
-  .score.red { width: 220px; border-color: #ff5252; color: #ff5252; box-shadow: 0 0 20px rgba(255,82,82,0.3); }
-  .score.flash { background: rgba(255,255,255,0.14); box-shadow: 0 0 30px currentColor; }
   .challenge-panel {
     width: min(440px, 90vw);
     min-height: 30px;
@@ -201,10 +184,6 @@
 <h1>🏒 HOCKEY 🏒</h1>
 <div class="subtitle">Симулятор игры в шайбу</div>
 
-<div class="scoreboard">
-  <div class="score blue" id="score1">ВЫ: 0</div>
-  <div class="score red" id="score2">КОМПЬЮТЕР: 0</div>
-</div>
 <div class="challenge-panel" id="challengePanel" aria-live="polite">
   <div class="challenge-title">ЧЕЛЛЕНДЖ</div>
   <div class="challenge-content">
@@ -279,7 +258,6 @@ const PLAYER_SPEED = 4; // Скорость игрока (не меняется)
 const ROTATE_SPEED = 0.09;
 const LEAD_DISTANCE = 50;
 
-let score1 = 0, score2 = 0;
 let challengeScored = 0, challengeConceded = 0;
 let challengeStartedAt = 0, challengeElapsed = 0, challengeRunning = false;
 let unbreakableAchievementUnlocked = false;
@@ -964,6 +942,7 @@ function checkStickHit(p, isPlayer) {
   const minDist = STICK_R + puck.r;
   
   if (dist < minDist && dist > 0) {
+    beginChallengeTimer();
     const nx = dx / dist;
     const ny = dy / dist;
     const overlap = minDist - dist;
@@ -1067,6 +1046,7 @@ function checkBodyHit(p) {
   const minDist = p.r + puck.r;
   
   if (dist < minDist && dist > 0) {
+    beginChallengeTimer();
     const nx = dx / dist;
     const ny = dy / dist;
     const overlap = minDist - dist;
@@ -1102,7 +1082,6 @@ function updatePlayer() {
   if (keys['d'] || keys['в'] || keys['arrowright']) dx += 1;
   
   if (dx !== 0 || dy !== 0) {
-    beginChallengeTimer();
     const len = Math.hypot(dx, dy);
     player.vx = (dx / len) * PLAYER_SPEED;
     player.vy = (dy / len) * PLAYER_SPEED;
@@ -1535,24 +1514,12 @@ function updatePuck(previousX = puck.x, previousY = puck.y) {
 }
 
 function goalScored(team) {
-  if (team === 1) score1++; else score2++;
   if (team === 1) challengeScored++; else challengeConceded++;
   stopChallengeTimer();
   goalScorer = team;
   goalFlash = 60;
   crowdJumpTime = 180;
-  updateScoreboard(true);
   showOverlay(team === 1 ? '⚡ ГОЛ! ВЫ ЗАБИЛИ! ⚡' : ' ГОЛ! КОМПЬЮТЕР! ');
-}
-
-function updateScoreboard(animate = false) {
-  document.getElementById('score1').textContent = `ВЫ: ${score1}`;
-  document.getElementById('score2').textContent = `КОМПЬЮТЕР: ${score2}`;
-  if (animate) {
-    const el = document.getElementById(goalScorer === 1 ? 'score1' : 'score2');
-    el.classList.add('flash');
-    setTimeout(() => el.classList.remove('flash'), 400);
-  }
 }
 
 function showOverlay(text) {
@@ -1569,10 +1536,8 @@ document.getElementById('continueBtn').addEventListener('click', () => {
 });
 
 document.getElementById('resetBtn').addEventListener('click', () => {
-  score1 = 0; score2 = 0;
   challengeScored = 0; challengeConceded = 0;
   unbreakableAchievementUnlocked = false;
-  updateScoreboard();
   resetPositions();
   startChallengeTimer();
 });
@@ -2034,42 +1999,6 @@ function drawHUD() {
   ctx.fillText(`🚫 Автоголов: ${cpu.ownGoalAttempts}`, FIELD_X + FIELD_W - 105, FIELD_Y + 98);
 }
 
-function drawScoreboardOnCanvas() {
-  const boardW = 200;
-  const boardH = 40;
-  const boardX = CANVAS_W/2 - boardW/2;
-  const boardY = 20;
-  
-  ctx.fillStyle = '#000';
-  ctx.fillRect(boardX, boardY, boardW, boardH);
-  ctx.strokeStyle = '#ffeb3b';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(boardX, boardY, boardW, boardH);
-  
-  ctx.font = 'bold 24px Arial';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  
-  ctx.fillStyle = '#4fc3f7';
-  ctx.fillText(score1, boardX + 50, boardY + boardH/2);
-  
-  ctx.fillStyle = '#fff';
-  ctx.fillText(':', boardX + boardW/2, boardY + boardH/2);
-  
-  ctx.fillStyle = '#ff5252';
-  ctx.fillText(score2, boardX + boardW - 50, boardY + boardH/2);
-  
-  ctx.font = 'bold 9px Arial';
-  ctx.fillStyle = '#4fc3f7';
-  ctx.fillText('ВЫ', boardX + 50, boardY + 8);
-  ctx.fillStyle = '#ff5252';
-  ctx.fillText('CPU', boardX + boardW - 50, boardY + 8);
-  
-  ctx.fillStyle = '#ffeb3b';
-  ctx.font = 'bold 10px Arial';
-  ctx.fillText('● LIVE', boardX + boardW/2, boardY + 8);
-}
-
 function drawStands() {
   ctx.save();
   
@@ -2339,8 +2268,6 @@ function gameLoop() {
   drawStands();
   drawSpectators();
   drawBanners();
-  drawScoreboardOnCanvas();
-  
   drawField();
   drawPlayer(cpu);
   drawPlayer(player);
@@ -2354,7 +2281,6 @@ function gameLoop() {
 
 resetPositions();
 startChallengeTimer();
-updateScoreboard();
 gameLoop();
 </script>
 
