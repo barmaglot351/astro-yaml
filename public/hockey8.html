@@ -260,6 +260,7 @@ const PLAYER_SPEED = 4; // Скорость игрока (не меняется)
 const ROTATE_SPEED = 0.09;
 const LEAD_DISTANCE = 50;
 
+let score1 = 0, score2 = 0;
 let challengeScored = 0, challengeConceded = 0;
 let challengeStartedAt = 0, challengeElapsed = 0, challengeRunning = false;
 let unbreakableAchievementUnlocked = false;
@@ -1516,6 +1517,7 @@ function updatePuck(previousX = puck.x, previousY = puck.y) {
 }
 
 function goalScored(team) {
+  if (team === 1) score1++; else score2++;
   if (team === 1) challengeScored++; else challengeConceded++;
   stopChallengeTimer();
   goalScorer = team;
@@ -1538,6 +1540,7 @@ document.getElementById('continueBtn').addEventListener('click', () => {
 });
 
 document.getElementById('resetBtn').addEventListener('click', () => {
+  score1 = 0; score2 = 0;
   challengeScored = 0; challengeConceded = 0;
   unbreakableAchievementUnlocked = false;
   resetPositions();
@@ -2001,6 +2004,41 @@ function drawHUD() {
   ctx.fillText(`🚫 Автоголов: ${cpu.ownGoalAttempts}`, FIELD_X + FIELD_W - 105, FIELD_Y + 98);
 }
 
+function drawScoreboardOnCanvas() {
+  const boardW = 200;
+  const boardH = 40;
+  const boardX = CANVAS_W / 2 - boardW / 2;
+  const boardY = 20;
+
+  ctx.fillStyle = '#000';
+  ctx.fillRect(boardX, boardY, boardW, boardH);
+  ctx.strokeStyle = '#ffeb3b';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(boardX, boardY, boardW, boardH);
+
+  ctx.font = 'bold 24px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  ctx.fillStyle = '#4fc3f7';
+  ctx.fillText(score1, boardX + 50, boardY + boardH / 2);
+
+  ctx.fillStyle = '#fff';
+  ctx.fillText(':', boardX + boardW / 2, boardY + boardH / 2);
+
+  ctx.fillStyle = '#ff5252';
+  ctx.fillText(score2, boardX + boardW - 50, boardY + boardH / 2);
+
+  ctx.font = 'bold 9px Arial';
+  ctx.fillStyle = '#4fc3f7';
+  ctx.fillStyle = '#ff5252';
+
+
+  ctx.fillStyle = '#ffeb3b';
+  ctx.font = 'bold 10px Arial';
+
+}
+
 function drawStands() {
   ctx.save();
   
@@ -2270,6 +2308,7 @@ function gameLoop() {
   drawStands();
   drawSpectators();
   drawBanners();
+  drawScoreboardOnCanvas();
   drawField();
   drawPlayer(cpu);
   drawPlayer(player);
