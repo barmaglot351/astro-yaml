@@ -227,7 +227,8 @@
 
 <div class="info">
   <b>W A S D</b> — движение &nbsp;|&nbsp;
-  <b>Q / E</b> — вращение клюшки<br>
+  <b>Q / E</b> — вращение клюшки &nbsp;|&nbsp;
+  <b>ПРОБЕЛ</b> — круговой удар 360° (Q — влево, E — вправо)<br>
   Сложность: стиль игры ИИ. Скорость: как быстро двигается ИИ
 </div>
 
@@ -259,6 +260,9 @@ const MAX_PUCK_SPEED = 18;
 const PLAYER_SPEED = 4; // Скорость игрока (не меняется)
 const ROTATE_SPEED = 0.09;
 const LEAD_DISTANCE = 50;
+const SPIN_DURATION = 0.48;
+const SPIN_COOLDOWN = 1;
+const SPIN_POWER = 16;
 
 let score1 = 0, score2 = 0;
 let challengeScored = 0, challengeConceded = 0;
@@ -282,7 +286,7 @@ const puck = { x: FIELD_W/2, y: FIELD_H/2, vx: 0, vy: 0, r: PUCK_R, trail: [] };
 const player = {
   x: 200, y: FIELD_H/2, vx: 0, vy: 0, r: PLAYER_R,
   angle: 0, rotationSpeed: 0, team: 'blue',
-  stealCooldown: 0, lastX: 200, lastY: FIELD_H/2,
+  stealCooldown: 0, shootCooldown: 0, spin: null, lastX: 200, lastY: FIELD_H/2,
   lastSkatePoints: null, lastScratchAngle: null
 };
 
@@ -298,9 +302,10 @@ const cpu = {
   tacticTimer: 0,
   tacticDuration: 0,
   shootCooldown: 0,
+  spin: null,
+  spinDecisionCooldown: 0,
   zigzagPhase: 0,
   feintDirection: 1,
-  hasShot: false,
   routeWaypoint: null,
   ownGoalAttempts: 0,
   stealCooldown: 0,
@@ -538,14 +543,31 @@ function getStickTip(p) {
 }
 
 const keys = {};
+let playerSpinQueued = false;
 window.addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
+  if (k === ' ') {
+    e.preventDefault();
+    if (!paused && !e.repeat && !keys[k]) playerSpinQueued = true;
+  }
   keys[k] = true;
   if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
 });
 window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+window.addEventListener('blur', () => {
+  for (const key of Object.keys(keys)) delete keys[key];
+  playerSpinQueued = false;
+});
 
 function resetPositions() {
+  playerSpinQueued = false;
+  for (const p of [player, cpu]) {
+    p.spin = null;
+    p.shootCooldown = 0;
+    p.vx = 0;
+    p.vy = 0;
+  }
+  cpu.spinDecisionCooldown = 0;
   puck.x = FIELD_W/2; puck.y = FIELD_H/2;
   puck.vx = 0; puck.vy = 0;
   puck.trail = [];
@@ -568,7 +590,6 @@ function resetPositions() {
   cpu.tactic = 'STRAIGHT';
   cpu.tacticTimer = 0;
   cpu.shootCooldown = 0;
-  cpu.hasShot = false;
   cpu.routeWaypoint = null;
   cpu.ownGoalAttempts = 0;
   cpu.stealCooldown = 0;
@@ -971,6 +992,128 @@ function getGoalDirection(fromX, fromY) {
   return { x: 0 - fromX, y: FIELD_H/2 - fromY };
 }
 
+function angleDifference(a, b) {
+  return Math.atan2(Math.sin(a - b), Math.cos(a - b));
+}
+
+// Prevent a circular strike from reaching through the solid net or the other player.
+function spinContactIsClear(p) {
+  const dx = puck.x - p.x, dy = puck.y - p.y;
+  const g = getGoalGeometry();
+  for (const rect of [g.left.goalRect, g.right.goalRect]) {
+    let enter = 0, leave = 1;
+    for (const [axis, delta] of [['x', dx], ['y', dy]]) {
+      const low = rect[axis + '1'] - STICK_R;
+      const high = rect[axis + '2'] + STICK_R;
+      if (Math.abs(delta) < 1e-8) {
+        if (p[axis] < low || p[axis] > high) { enter = 2; break; }
+      } else {
+        const a = (low - p[axis]) / delta, b = (high - p[axis]) / delta;
+        enter = Math.max(enter, Math.min(a, b));
+        leave = Math.min(leave, Math.max(a, b));
+      }
+    }
+    if (enter <= leave) return false;
+  }
+  const other = p === player ? cpu : player;
+  const lengthSquared = dx * dx + dy * dy;
+  const t = lengthSquared ? Math.max(0, Math.min(1,
+    ((other.x - p.x) * dx + (other.y - p.y) * dy) / lengthSquared)) : 0;
+  return Math.hypot(other.x - p.x - dx * t, other.y - p.y - dy * t) > other.r;
+}
+
+function startSpinStrike(p, direction = 1, power = SPIN_POWER) {
+  if (paused || p.spin || p.shootCooldown > 0) return false;
+  p.spin = { remaining: Math.PI * 2, direction: direction < 0 ? -1 : 1,
+    power: Math.min(MAX_PUCK_SPEED, power), hit: false };
+  p.shootCooldown = SPIN_COOLDOWN;
+  return true;
+}
+
+function updateSpinStrike(p, dt) {
+  if (!p.spin) return false;
+  const spin = p.spin;
+  const sweep = Math.min(spin.remaining, Math.PI * 2 * dt / SPIN_DURATION);
+  // Subdivide the arc so even a slow frame cannot skip a nearby puck.
+  const steps = Math.max(1, Math.ceil(sweep / 0.05));
+  for (let i = 0; i <= steps; i++) {
+    if (i > 0) p.angle += spin.direction * sweep / steps;
+    if (spin.hit) continue;
+    const tip = getStickTip(p);
+    const radius = Math.hypot(puck.x - p.x, puck.y - p.y);
+    const puckAngle = Math.atan2(puck.y - p.y, puck.x - p.x);
+    if (radius < p.r + puck.r - 2 ||
+        Math.abs(angleDifference(p.angle, puckAngle)) > 0.07 ||
+        Math.hypot(puck.x - tip.x, puck.y - tip.y) > STICK_R + puck.r ||
+        !spinContactIsClear(p)) continue;
+    beginChallengeTimer();
+    puck.vx = Math.cos(p.angle) * spin.power;
+    puck.vy = Math.sin(p.angle) * spin.power;
+    spin.hit = true;
+  }
+  p.rotationSpeed = spin.direction * Math.PI * 2 / SPIN_DURATION / 60;
+  spin.remaining = Math.max(0, spin.remaining - sweep);
+  if (spin.remaining < 1e-8) {
+    p.spin = null;
+    p.rotationSpeed = 0;
+    p.angle = angleDifference(p.angle, 0);
+  }
+  return true;
+}
+
+function getCPUSpinPlan() {
+  const g = getGoalGeometry();
+  const nearOpponent = Math.hypot(player.x - puck.x, player.y - puck.y) < 70;
+  const openSide = player.y < g.centerY ? 1 : -1;
+  let targetX = g.left.goalLine, targetY = g.centerY;
+  let mode = 'shot', power = SPIN_POWER, tolerance = 0.3;
+  if (cpu.state === 'DEFEND_OWN_GOAL' || cpu.state === 'DEFEND') {
+    mode = 'clear'; targetX = FIELD_W / 2;
+    targetY = puck.y < g.centerY ? 65 : FIELD_H - 65;
+    tolerance = 0.7;
+  } else if (cpu.state === 'INTERCEPT' || nearOpponent && cpu.tactic === 'FEINT') {
+    mode = 'steal'; targetX = puck.x - 180;
+    targetY = puck.y + openSide * 130; power = 14; tolerance = 0.55;
+  } else if (puck.x < g.left.goalLine + puck.r) {
+    mode = 'behind-net'; targetX = g.left.goalLine + 150;
+    targetY = puck.y < g.centerY ? g.top - 85 : g.bottom + 85;
+    power = 13; tolerance = 0.55;
+  } else if (cpu.tactic === 'SNIPER') {
+    mode = 'sniper'; targetY += openSide * (GOAL_H / 2 - puck.r - 10);
+    power = 17; tolerance = 0.12;
+  } else if (cpu.tactic === 'FLANK') {
+    mode = 'flank'; targetY += openSide * 25;
+  } else if (cpu.tactic === 'ZIGZAG') {
+    mode = 'zigzag'; targetY += Math.sin(cpu.zigzagPhase) * 25;
+  } else if (cpu.tactic === 'FEINT') {
+    mode = 'feint'; targetY += cpu.feintDirection * 25; power = 15;
+  }
+  const aimAngle = Math.atan2(targetY - puck.y, targetX - puck.x);
+  const contactAngle = Math.atan2(puck.y - cpu.y, puck.x - cpu.x);
+  const direction = Math.sign(angleDifference(contactAngle, cpu.angle)) || cpu.attackSide;
+  return { mode, power, tolerance, aimAngle, contactAngle, direction };
+}
+
+function tryCPUSpinStrike() {
+  if (cpu.spin || cpu.shootCooldown > 0 || cpu.spinDecisionCooldown > 0) return;
+  cpu.spinDecisionCooldown = 0.18;
+  const distance = Math.hypot(puck.x - cpu.x, puck.y - cpu.y);
+  if (distance > STICK_LEN + STICK_R + puck.r || distance < cpu.r + puck.r - 2) return;
+  const plan = getCPUSpinPlan();
+  if (Math.abs(angleDifference(plan.contactAngle, plan.aimAngle)) > plan.tolerance) return;
+  // Reject shots toward our own goal, including a clearance from behind the net.
+  const dx = Math.cos(plan.contactAngle), dy = Math.sin(plan.contactAngle);
+  const ownGoal = getGoalGeometry().right;
+  const travel = (ownGoal.goalLine - puck.x) / dx;
+  if (Math.abs(dx) > 1e-6 && travel > 0 &&
+      Math.abs(puck.y + dy * travel - FIELD_H / 2) < GOAL_H / 2 + puck.r + 12) return;
+  if (plan.mode === 'feint' && cpu.tacticTimer % 90 < 25) return;
+  if (!spinContactIsClear(cpu)) return;
+  if (Math.random() < 0.3 + aiDifficulty / 100 * 0.6) {
+    startSpinStrike(cpu, plan.direction, plan.power);
+  }
+}
+
 function checkStickHit(p, isPlayer) {
   const tip = getStickTip(p);
   const dx = puck.x - tip.x;
@@ -1109,8 +1252,9 @@ function checkBodyHit(p) {
   }
 }
 
-function updatePlayer() {
+function updatePlayer(dt = 1 / 60) {
   if (player.stealCooldown > 0) player.stealCooldown--;
+  player.shootCooldown = Math.max(0, player.shootCooldown - dt);
   
   let dx = 0, dy = 0;
   if (keys['w'] || keys['ц'] || keys['arrowup']) dy -= 1;
@@ -1130,6 +1274,17 @@ function updatePlayer() {
   player.x += player.vx;
   player.y += player.vy;
   clampPlayerToField(player);
+
+  if (playerSpinQueued) {
+    const direction = keys['q'] || keys['й'] ? -1 :
+      keys['e'] || keys['у'] ? 1 : Math.sign(player.rotationSpeed) || 1;
+    startSpinStrike(player, direction);
+    playerSpinQueued = false;
+  }
+  if (updateSpinStrike(player, dt)) {
+    checkBodyHit(player);
+    return;
+  }
   
   if (keys['q'] || keys['й']) {
     player.rotationSpeed = -ROTATE_SPEED;
@@ -1156,48 +1311,13 @@ function pickNewTactic() {
   cpu.tacticDuration = 90 + Math.random() * 120;
   cpu.zigzagPhase = 0;
   cpu.feintDirection = Math.random() > 0.5 ? 1 : -1;
-  cpu.hasShot = false;
 }
 
-function cpuShoot(power = 10) {
-  if (cpuIsBetweenPuckAndOwnGoal()) {
-    cpu.ownGoalAttempts++;
-    return false;
-  }
-  
-  if (puck.x > cpu.x - 10) {
-    return false;
-  }
-  
-  const goalAngle = Math.atan2(FIELD_H/2 - puck.y, 0 - puck.x);
-  
-  // aiDifficulty влияет на точность
-  const accuracy = 0.1 + (aiDifficulty / 100) * 0.4; // от 0.1 до 0.5
-  const spread = (Math.random() - 0.5) * accuracy;
-  const finalAngle = goalAngle + spread;
-  
-  if (Math.cos(finalAngle) > 0) {
-    return false;
-  }
-  
-  const angleToPuck = Math.atan2(puck.y - cpu.y, puck.x - cpu.x);
-  cpu.angle = angleToPuck;
-  
-  cpu.rotationSpeed = -getCPURotateSpeed() * 1.5;
-  
-  setTimeout(() => {
-    cpu.rotationSpeed = getCPURotateSpeed() * 2;
-  }, 100);
-  
-  cpu.shootCooldown = 60;
-  cpu.hasShot = true;
-  return true;
-}
-
-function updateCPU() {
+function updateCPU(dt = 1 / 60) {
   if (cpu.stealCooldown > 0) cpu.stealCooldown--;
   cpu.stateTimer++;
-  if (cpu.shootCooldown > 0) cpu.shootCooldown--;
+  cpu.shootCooldown = Math.max(0, cpu.shootCooldown - dt);
+  cpu.spinDecisionCooldown = Math.max(0, cpu.spinDecisionCooldown - dt);
   
   const cpuSpeed = getCPUSpeed();
   const cpuRotateSpeed = getCPURotateSpeed();
@@ -1267,26 +1387,6 @@ function updateCPU() {
       pickNewTactic();
     }
     
-    const tip = getStickTip(cpu);
-    const distTipToPuck = Math.hypot(tip.x - puck.x, tip.y - puck.y);
-    
-    // aiDifficulty влияет на расстояние и вероятность удара
-    const shootDistance = 150 + (aiDifficulty / 100) * 250;
-    const shootProbability = 0.3 + (aiDifficulty / 100) * 0.6;
-    
-    if (distTipToPuck < STICK_R + PUCK_R + 15 && cpu.shootCooldown <= 0 && !cpu.hasShot) {
-      const puckLeftOfCPU = puck.x < cpu.x - 10;
-      if (puckLeftOfCPU) {
-        const distToGoal = Math.hypot(puck.x - 0, puck.y - FIELD_H/2);
-        
-        const shouldShoot = (distToGoal < shootDistance || aiDifficulty > 70) && Math.random() < shootProbability;
-        
-        if (shouldShoot) {
-          const shotPower = cpu.tactic === 'SNIPER' ? 13 : 10;
-          cpuShoot(shotPower);
-        }
-      }
-    }
   }
   
   let targetX, targetY;
@@ -1474,6 +1574,15 @@ function updateCPU() {
     }
   }
   
+  // Approach from the side opposite the intended shot, then sweep through the puck.
+  if (cpu.state === 'ATTACK' && !cpu.spin && distToPuck < 180 && aiDifficulty >= 30) {
+    const plan = getCPUSpinPlan();
+    if (plan.mode !== 'feint' || cpu.tacticTimer % 90 >= 25) {
+      targetX = puck.x - Math.cos(plan.aimAngle) * (STICK_LEN + 4);
+      targetY = puck.y - Math.sin(plan.aimAngle) * (STICK_LEN + 4);
+    }
+  }
+
   // Some attack formulas can place the desired point directly inside the net.
   // In that case chase the puck itself so the route goes around the goal.
   let destination = getPointOnFieldEdge(targetX, targetY);
@@ -1496,6 +1605,7 @@ function updateCPU() {
     if (cpu.state === 'INTERCEPT' || cpu.state === 'DEFEND_OWN_GOAL') speedMul = 0.95;
     if (cpu.state === 'ATTACK' && distToPuck < 80) speedMul = 1.0;
     if (cpu.tactic === 'SNIPER') speedMul = 0.85;
+    if (cpu.spin) speedMul *= 0.25;
     
     // Around a goal, reach the route corner completely before turning.
     const speed = Math.min(cpuSpeed * speedMul, followingGoalRoute ? distT : distT * 0.12);
@@ -1509,6 +1619,12 @@ function updateCPU() {
   cpu.x += cpu.vx;
   cpu.y += cpu.vy;
   clampPlayerToField(cpu);
+
+  tryCPUSpinStrike();
+  if (updateSpinStrike(cpu, dt)) {
+    checkBodyHit(cpu);
+    return;
+  }
   
   const angleToPuck = Math.atan2(puck.y - cpu.y, puck.x - cpu.x);
   let angleDiff = angleToPuck - cpu.angle;
@@ -2639,14 +2755,18 @@ function drawBanners() {
   });
 }
 
+let lastGameFrameAt = performance.now();
 function gameLoop() {
+  const now = performance.now();
+  const dt = Math.min(0.05, Math.max(0, (now - lastGameFrameAt) / 1000));
+  lastGameFrameAt = now;
   frameCount++;
   if (challengeRunning) updateChallengePanel();
   
   if (!paused) {
     const previousPuckX = puck.x, previousPuckY = puck.y;
-    updatePlayer();
-    updateCPU();
+    updatePlayer(dt);
+    updateCPU(dt);
     updatePuck(previousPuckX, previousPuckY);
     updateIceEffects();
     if (crowdJumpTime > 0) crowdJumpTime--;
