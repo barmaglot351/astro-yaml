@@ -298,6 +298,7 @@ const cpu = {
   zigzagPhase: 0,
   feintDirection: 1,
   hasShot: false,
+  routeWaypoint: null,
   ownGoalAttempts: 0,
   stealCooldown: 0
 };
@@ -542,6 +543,7 @@ function resetPositions() {
   cpu.tacticTimer = 0;
   cpu.shootCooldown = 0;
   cpu.hasShot = false;
+  cpu.routeWaypoint = null;
   cpu.ownGoalAttempts = 0;
   cpu.stealCooldown = 0;
 }
@@ -700,10 +702,11 @@ function updateChallengePanel() {
 
 function getCPURouteTarget(target) {
   const g = getGoalGeometry();
-  const clearance = cpu.r + 5;
+  const depthClearance = cpu.r + 2;
+  const arcClearance = cpu.r + 60;
   const obstacles = [g.left.goalRect, g.right.goalRect].map(rect => ({
-    x1: rect.x1 - clearance, x2: rect.x2 + clearance,
-    y1: rect.y1 - clearance, y2: rect.y2 + clearance
+    x1: rect.x1 - depthClearance, x2: rect.x2 + depthClearance,
+    y1: rect.y1 - arcClearance, y2: rect.y2 + arcClearance
   }));
   const visible = (a, b) => !obstacles.some(rect => {
     let enter = 0, leave = 1;
@@ -721,6 +724,17 @@ function getCPURouteTarget(target) {
     }
     return enter < leave;
   });
+  if (cpu.routeWaypoint) {
+    const waypointDistance = Math.hypot(
+      cpu.x - cpu.routeWaypoint.x,
+      cpu.y - cpu.routeWaypoint.y
+    );
+    if (waypointDistance > 14 && visible(cpu, cpu.routeWaypoint)) {
+      return cpu.routeWaypoint;
+    }
+    cpu.routeWaypoint = null;
+  }
+
   if (visible(cpu, target)) return target;
 
   // Find the shortest clear route via the corners of either goal.
@@ -743,7 +757,8 @@ function getCPURouteTarget(target) {
     if (current === 1) {
       let next = 1;
       while (previous[next] > 0) next = previous[next];
-      return nodes[next];
+      cpu.routeWaypoint = { x: nodes[next].x, y: nodes[next].y };
+      return cpu.routeWaypoint;
     }
     visited.add(current);
     for (let i = 0; i < nodes.length; i++) {
