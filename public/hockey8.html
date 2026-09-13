@@ -83,12 +83,11 @@
   }
   .game-container {
     position: relative;
-    border-radius: 18px;
-    padding: 18px;
-    background: linear-gradient(135deg, #3a2818, #1a1008);
-    box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
   }
-  canvas { display: block; border-radius: 10px; }
+  canvas { display: block; border-radius: 0; }
   .controls { margin-top: 12px; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; align-items: center; }
   button {
     padding: 9px 18px;
@@ -170,8 +169,8 @@
   .info b { color: #4fc3f7; }
   .overlay {
     position: absolute;
-    inset: 18px;
-    border-radius: 10px;
+    inset: 0;
+    border-radius: 0;
     background: rgba(0,0,0,0.75);
     display: none;
     align-items: center;
