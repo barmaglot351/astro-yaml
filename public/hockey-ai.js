@@ -10,6 +10,8 @@
       x: xy[0], y: xy[1], homeX: xy[0], homeY: xy[1], cooldown: 0, held: 0};
   });
   const puck = {x: 600, y: 350, vx: 0, vy: 0, owner: null, lock: 0};
+  const SHOT_SPEED_MIN = 1050;
+  const SHOT_SPEED_MAX = 1200;
   // Судья не входит в skaters: не сталкивается, не отбирает и не отбивает шайбу.
   const refereeNode = document.getElementById('referee');
   const referee = {x: 600, y: 110, vx: 0, vy: 0, phase: -Math.PI / 2, think: 0};
@@ -115,7 +117,8 @@
           } else if (p.held > 0.8 && Math.abs(goalX - p.x) < 320 && Math.abs(p.y - 350) < 170) {
             const goalie = opponent.find(o => o.number === 0);
             const aim = goalie && goalie.y + 8 < 350 ? 383 : 317;
-            release(p, goalX, aim + (Math.random() - 0.5) * 14, 720, 'бросок по воротам!');
+            const shotSpeed = SHOT_SPEED_MIN + Math.random() * (SHOT_SPEED_MAX - SHOT_SPEED_MIN);
+            release(p, goalX, aim + (Math.random() - 0.5) * 14, shotSpeed, 'бросок по воротам!');
           } else {
             move(p, goalX - dir * 135, 350 + Math.sin(p.number * 2) * 65, 124, dt);
           }
