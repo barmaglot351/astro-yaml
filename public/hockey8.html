@@ -210,7 +210,6 @@
 
 <div class="controls">
   <button id="resetBtn">🔄 СБРОС СЧЁТА</button>
-  <button id="toggleHudBtn" type="button" aria-pressed="true">👁 ПОКАЗАТЬ ПАНЕЛИ</button>
   
   <div class="slider-container">
     <span class="slider-label">🎯 СЛОЖНОСТЬ</span>
@@ -265,7 +264,6 @@ let challengeScored = 0, challengeConceded = 0;
 let challengeStartedAt = 0, challengeElapsed = 0, challengeRunning = false;
 let unbreakableAchievementUnlocked = false;
 let paused = false;
-let hudVisible = false;
 let goalFlash = 0;
 let goalScorer = 0;
 let crowdJumpTime = 0;
@@ -305,13 +303,6 @@ const cpu = {
 };
 
 const TACTICS = ['STRAIGHT', 'FLANK', 'ZIGZAG', 'SNIPER', 'FEINT'];
-const TACTIC_NAMES = {
-  'STRAIGHT': ' ПРЯМАЯ',
-  'FLANK': '🔄 ОБХОД',
-  'ZIGZAG': '〰️ ЗИГЗАГ',
-  'SNIPER': ' СНАЙПЕР',
-  'FEINT': '🎭 ФИНТ'
-};
 
 const SHIRT_COLORS = [
   '#e53935', '#1e88e5', '#fdd835', '#43a047', '#8e24aa',
@@ -1547,12 +1538,6 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   startChallengeTimer();
 });
 
-document.getElementById('toggleHudBtn').addEventListener('click', (event) => {
-  hudVisible = !hudVisible;
-  event.currentTarget.textContent = hudVisible ? '👁 СКРЫТЬ ПАНЕЛИ' : '👁 ПОКАЗАТЬ ПАНЕЛИ';
-  event.currentTarget.setAttribute('aria-pressed', String(!hudVisible));
-});
-
 let frameCount = 0;
 
 function drawField() {
@@ -1660,40 +1645,52 @@ function drawField() {
   ctx.arc(g.right.crease.cx, g.right.crease.cy, g.right.crease.r, Math.PI/2, -Math.PI/2);
   ctx.stroke();
   
+  function traceGoalNet(rect) {
+    const width = rect.x2 - rect.x1;
+    const height = rect.y2 - rect.y1;
+    const radius = Math.min(8, width / 2, height / 2);
+    ctx.beginPath();
+    ctx.moveTo(rect.x1 + radius, rect.y1);
+    ctx.lineTo(rect.x2 - radius, rect.y1);
+    ctx.arcTo(rect.x2, rect.y1, rect.x2, rect.y1 + radius, radius);
+    ctx.lineTo(rect.x2, rect.y2 - radius);
+    ctx.arcTo(rect.x2, rect.y2, rect.x2 - radius, rect.y2, radius);
+    ctx.lineTo(rect.x1 + radius, rect.y2);
+    ctx.arcTo(rect.x1, rect.y2, rect.x1, rect.y2 - radius, radius);
+    ctx.lineTo(rect.x1, rect.y1 + radius);
+    ctx.arcTo(rect.x1, rect.y1, rect.x1 + radius, rect.y1, radius);
+    ctx.closePath();
+  }
+
+  function drawGoalNet(rect) {
+    ctx.save();
+    traceGoalNet(rect);
+    ctx.fillStyle = 'rgba(200, 220, 240, 0.5)';
+    ctx.fill();
+    ctx.clip();
+
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.lineWidth = 1;
+    const step = 5;
+    for (let j = rect.y1; j <= rect.y2; j += step) {
+      ctx.beginPath(); ctx.moveTo(rect.x1, j); ctx.lineTo(rect.x2, j); ctx.stroke();
+    }
+    for (let i = rect.x1; i <= rect.x2; i += step) {
+      ctx.beginPath(); ctx.moveTo(i, rect.y1); ctx.lineTo(i, rect.y2); ctx.stroke();
+    }
+    ctx.restore();
+
+    traceGoalNet(rect);
+    ctx.strokeStyle = '#d32f2f';
+    ctx.lineWidth = 3;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  }
+
   const lg = g.left.goalRect;
-  ctx.fillStyle = 'rgba(200, 220, 240, 0.5)';
-  ctx.fillRect(lg.x1, lg.y1, lg.x2 - lg.x1, lg.y2 - lg.y1);
-  
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-  ctx.lineWidth = 1;
-  const step = 5;
-  for (let j = lg.y1; j <= lg.y2; j += step) {
-    ctx.beginPath(); ctx.moveTo(lg.x1, j); ctx.lineTo(lg.x2, j); ctx.stroke();
-  }
-  for (let i = lg.x1; i <= lg.x2; i += step) {
-    ctx.beginPath(); ctx.moveTo(i, lg.y1); ctx.lineTo(i, lg.y2); ctx.stroke();
-  }
-  
-  ctx.strokeStyle = '#d32f2f';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(lg.x1, lg.y1, lg.x2 - lg.x1, lg.y2 - lg.y1);
-  
   const rg = g.right.goalRect;
-  ctx.fillStyle = 'rgba(200, 220, 240, 0.5)';
-  ctx.fillRect(rg.x1, rg.y1, rg.x2 - rg.x1, rg.y2 - rg.y1);
-  
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-  ctx.lineWidth = 1;
-  for (let j = rg.y1; j <= rg.y2; j += step) {
-    ctx.beginPath(); ctx.moveTo(rg.x1, j); ctx.lineTo(rg.x2, j); ctx.stroke();
-  }
-  for (let i = rg.x1; i <= rg.x2; i += step) {
-    ctx.beginPath(); ctx.moveTo(i, rg.y1); ctx.lineTo(i, rg.y2); ctx.stroke();
-  }
-  
-  ctx.strokeStyle = '#d32f2f';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(rg.x1, rg.y1, rg.x2 - rg.x1, rg.y2 - rg.y1);
+  drawGoalNet(lg);
+  drawGoalNet(rg);
   
   ctx.strokeStyle = '#d32f2f';
   ctx.lineWidth = 3;
@@ -1923,85 +1920,6 @@ function drawStealFlash() {
     
     stealFlash--;
   }
-}
-
-function drawHUD() {
-  const rot = player.rotationSpeed;
-  const rotPercent = Math.min(1, Math.abs(rot) / ROTATE_SPEED);
-  
-  ctx.fillStyle = 'rgba(0,0,0,0.75)';
-  ctx.fillRect(FIELD_X + 10, FIELD_Y + 10, 200, 50);
-  ctx.strokeStyle = '#4fc3f7';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(FIELD_X + 10, FIELD_Y + 10, 200, 50);
-  
-  ctx.fillStyle = '#4fc3f7';
-  ctx.font = 'bold 12px Arial';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  ctx.fillText('КРУЧУ КЛЮШКУ:', FIELD_X + 20, FIELD_Y + 18);
-  
-  ctx.fillStyle = '#333';
-  ctx.fillRect(FIELD_X + 20, FIELD_Y + 38, 160, 10);
-  
-  const barColor = rotPercent > 0.7 ? '#ff5252' : rotPercent > 0.3 ? '#ffeb3b' : '#4fc3f7';
-  ctx.fillStyle = barColor;
-  ctx.fillRect(FIELD_X + 20, FIELD_Y + 38, 160 * rotPercent, 10);
-  
-  ctx.strokeStyle = '#fff';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(FIELD_X + 20, FIELD_Y + 38, 160, 10);
-  
-  const tacticName = TACTIC_NAMES[cpu.tactic] || cpu.tactic;
-  const stateNames = { 
-    ATTACK: '⚔️ АТАКА', 
-    DEFEND: '🛡️ ЗАЩИТА', 
-    INTERCEPT: '🎯 ПЕРЕХВАТ',
-    DEFEND_OWN_GOAL: ' ЗАЩИТА ВОРОТ'
-  };
-  
-  ctx.fillStyle = 'rgba(0,0,0,0.75)';
-  ctx.fillRect(FIELD_X + FIELD_W - 200, FIELD_Y + 10, 190, 70);
-  ctx.strokeStyle = '#ff5252';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(FIELD_X + FIELD_W - 200, FIELD_Y + 10, 190, 70);
-  
-  ctx.fillStyle = '#ff5252';
-  ctx.font = 'bold 11px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText(`ИИ: ${stateNames[cpu.state]}`, FIELD_X + FIELD_W - 105, FIELD_Y + 22);
-  ctx.fillText(`Тактика: ${tacticName}`, FIELD_X + FIELD_W - 105, FIELD_Y + 36);
-  
-  // Индикатор сложности
-  const diffColor = aiDifficulty < 30 ? '#4caf50' : aiDifficulty > 70 ? '#ff5252' : '#ffeb3b';
-  ctx.fillStyle = diffColor;
-  ctx.fillRect(FIELD_X + FIELD_W - 195, FIELD_Y + 44, 180 * (aiDifficulty / 100), 10);
-  ctx.strokeStyle = '#fff';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(FIELD_X + FIELD_W - 195, FIELD_Y + 44, 180, 10);
-  ctx.fillStyle = '#fff';
-  ctx.font = '9px Arial';
-  ctx.fillText(`Сложность: ${aiDifficulty}%`, FIELD_X + FIELD_W - 105, FIELD_Y + 52);
-  
-  // Индикатор скорости
-  const speedColor = aiSpeed < 30 ? '#4caf50' : aiSpeed > 70 ? '#ff5252' : '#ffeb3b';
-  ctx.fillStyle = speedColor;
-  ctx.fillRect(FIELD_X + FIELD_W - 195, FIELD_Y + 58, 180 * (aiSpeed / 100), 10);
-  ctx.strokeStyle = '#fff';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(FIELD_X + FIELD_W - 195, FIELD_Y + 58, 180, 10);
-  ctx.fillStyle = '#fff';
-  ctx.font = '9px Arial';
-  ctx.fillText(`Скорость: ${aiSpeed}%`, FIELD_X + FIELD_W - 105, FIELD_Y + 66);
-  
-  ctx.fillStyle = 'rgba(0,0,0,0.75)';
-  ctx.fillRect(FIELD_X + FIELD_W - 200, FIELD_Y + 85, 190, 20);
-  ctx.strokeStyle = '#4caf50';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(FIELD_X + FIELD_W - 200, FIELD_Y + 85, 190, 20);
-  ctx.fillStyle = '#4caf50';
-  ctx.font = '10px Arial';
-  ctx.fillText(`🚫 Автоголов: ${cpu.ownGoalAttempts}`, FIELD_X + FIELD_W - 105, FIELD_Y + 98);
 }
 
 function drawScoreboardOnCanvas() {
@@ -2315,7 +2233,6 @@ function gameLoop() {
   drawPuck();
   drawGoalFlash();
   drawStealFlash();
-  if (hudVisible) drawHUD();
   
   requestAnimationFrame(gameLoop);
 }
