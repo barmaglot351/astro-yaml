@@ -159,13 +159,12 @@
     position: absolute;
     inset: 0;
     border-radius: 0;
-    background: rgba(0,0,0,0.75);
+    background: transparent;
     display: none;
     align-items: center;
     justify-content: center;
     flex-direction: column;
     z-index: 10;
-    backdrop-filter: blur(6px);
   }
   .overlay.show { display: flex; }
   .overlay h2 {
@@ -176,6 +175,7 @@
     -webkit-text-fill-color: transparent;
     font-weight: 900;
     letter-spacing: 6px;
+    filter: drop-shadow(0 3px 5px rgba(0,0,0,0.85));
   }
 </style>
 </head>
@@ -185,7 +185,7 @@
 <div class="subtitle">Симулятор игры в шайбу</div>
 
 <div class="challenge-panel" id="challengePanel" aria-live="polite">
-  <div class="challenge-title">ЧЕЛЛЕНДЖ</div>
+  <div class="challenge-title">ТАЙМЕР</div>
   <div class="challenge-content">
     <div class="challenge-timer">
       <div class="challenge-timer-value" id="challengeTime">00:00.0</div>
