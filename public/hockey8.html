@@ -210,6 +210,7 @@
 
 <div class="controls">
   <button id="resetBtn">🔄 СБРОС СЧЁТА</button>
+  <button id="toggleTracksBtn" type="button" aria-pressed="true">⛸ СЛЕДЫ: ВКЛ</button>
   
   <div class="slider-container">
     <span class="slider-label">🎯 СЛОЖНОСТЬ</span>
@@ -264,6 +265,7 @@ let challengeScored = 0, challengeConceded = 0;
 let challengeStartedAt = 0, challengeElapsed = 0, challengeRunning = false;
 let unbreakableAchievementUnlocked = false;
 let paused = false;
+let iceEffectsEnabled = true;
 let goalFlash = 0;
 let goalScorer = 0;
 let crowdJumpTime = 0;
@@ -280,7 +282,8 @@ const puck = { x: FIELD_W/2, y: FIELD_H/2, vx: 0, vy: 0, r: PUCK_R, trail: [] };
 const player = {
   x: 200, y: FIELD_H/2, vx: 0, vy: 0, r: PLAYER_R,
   angle: 0, rotationSpeed: 0, team: 'blue',
-  stealCooldown: 0, lastX: 200, lastY: FIELD_H/2
+  stealCooldown: 0, lastX: 200, lastY: FIELD_H/2,
+  lastSkatePoints: null, lastScratchAngle: null
 };
 
 const cpu = {
@@ -300,7 +303,9 @@ const cpu = {
   hasShot: false,
   routeWaypoint: null,
   ownGoalAttempts: 0,
-  stealCooldown: 0
+  stealCooldown: 0,
+  lastSkatePoints: null,
+  lastScratchAngle: null
 };
 
 const TACTICS = ['STRAIGHT', 'FLANK', 'ZIGZAG', 'SNIPER', 'FEINT'];
@@ -314,9 +319,20 @@ const SHIRT_COLORS = [
 const SKIN_COLORS = ['#ffdbac', '#f1c27d', '#e0ac69', '#c68642', '#8d5524', '#ffcd94'];
 
 const spectators = [];
+const skateTracks = [];
+const scratchLayer = document.createElement('canvas');
+scratchLayer.width = FIELD_W;
+scratchLayer.height = FIELD_H;
+const scratchCtx = scratchLayer.getContext('2d');
+let scratchCount = 0;
 const STAND_ROWS = 5;
 const ROW_HEIGHT = 14;
 const STAND_WIDTH = 70;
+const MAX_ICE_SCRATCHES = 360;
+const SKATE_TRACK_LIFETIME = 2500;
+const SKATE_TRACK_SAMPLE_FRAMES = 3;
+const TRACK_FADE_BUCKETS = 4;
+const SCRATCH_TURN_THRESHOLD = 0.12;
 
 // Ползунки
 const aiDifficultySlider = document.getElementById('aiDifficultySlider');
@@ -531,6 +547,8 @@ function resetPositions() {
   player.angle = 0;
   player.rotationSpeed = 0;
   player.stealCooldown = 0;
+  player.lastSkatePoints = null;
+  player.lastScratchAngle = null;
   
   cpu.x = FIELD_W - 200; cpu.y = FIELD_H/2;
   cpu.lastX = FIELD_W - 200; cpu.lastY = FIELD_H/2;
@@ -546,6 +564,8 @@ function resetPositions() {
   cpu.routeWaypoint = null;
   cpu.ownGoalAttempts = 0;
   cpu.stealCooldown = 0;
+  cpu.lastSkatePoints = null;
+  cpu.lastScratchAngle = null;
 }
 
 function isLeadingPuck(p) {
@@ -1549,11 +1569,165 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   score1 = 0; score2 = 0;
   challengeScored = 0; challengeConceded = 0;
   unbreakableAchievementUnlocked = false;
+  clearIceEffects();
   resetPositions();
   startChallengeTimer();
 });
 
+document.getElementById('toggleTracksBtn').addEventListener('click', (event) => {
+  iceEffectsEnabled = !iceEffectsEnabled;
+  event.currentTarget.textContent = iceEffectsEnabled ? '⛸ СЛЕДЫ: ВКЛ' : '⛸ СЛЕДЫ: ВЫКЛ';
+  event.currentTarget.setAttribute('aria-pressed', String(iceEffectsEnabled));
+
+  if (!iceEffectsEnabled) {
+    clearIceEffects();
+  }
+});
+
 let frameCount = 0;
+
+function clearIceEffects() {
+  skateTracks.length = 0;
+  scratchCount = 0;
+  scratchCtx.clearRect(0, 0, scratchLayer.width, scratchLayer.height);
+  player.lastSkatePoints = null;
+  player.lastScratchAngle = null;
+  cpu.lastSkatePoints = null;
+  cpu.lastScratchAngle = null;
+}
+
+function addCachedIceScratch(p, movementAngle) {
+  if (scratchCount >= MAX_ICE_SCRATCHES) return;
+  const angle = movementAngle + (Math.random() - 0.5) * 0.9;
+  const length = 5 + Math.random() * 12;
+  const startX = p.x + (Math.random() - 0.5) * p.r * 1.5;
+  const startY = p.y + (Math.random() - 0.5) * p.r * 1.5;
+
+  scratchCtx.strokeStyle = `rgba(72, 118, 150, ${0.08 + Math.random() * 0.1})`;
+  scratchCtx.lineWidth = 0.45 + Math.random() * 0.55;
+  scratchCtx.lineCap = 'round';
+  scratchCtx.beginPath();
+  scratchCtx.moveTo(startX, startY);
+  scratchCtx.lineTo(
+    startX - Math.cos(angle) * length,
+    startY - Math.sin(angle) * length
+  );
+  scratchCtx.stroke();
+  scratchCount++;
+}
+
+function recordSkateTracks(p, now) {
+  const speed = Math.hypot(p.vx, p.vy);
+  if (speed < 0.65) {
+    p.lastSkatePoints = null;
+    p.lastScratchAngle = null;
+    return;
+  }
+
+  const directionX = p.vx / speed;
+  const directionY = p.vy / speed;
+  const movementAngle = Math.atan2(directionY, directionX);
+  const perpendicularX = -directionY;
+  const perpendicularY = directionX;
+  const rearX = p.x - directionX * p.r * 0.55;
+  const rearY = p.y - directionY * p.r * 0.55;
+  const skateSpacing = 8;
+  const points = {
+    left: {
+      x: rearX + perpendicularX * skateSpacing,
+      y: rearY + perpendicularY * skateSpacing
+    },
+    right: {
+      x: rearX - perpendicularX * skateSpacing,
+      y: rearY - perpendicularY * skateSpacing
+    }
+  };
+
+  if (p.lastSkatePoints) {
+    const jump = Math.hypot(
+      points.left.x - p.lastSkatePoints.left.x,
+      points.left.y - p.lastSkatePoints.left.y
+    );
+    if (jump < 16) {
+      skateTracks.push({ from: p.lastSkatePoints.left, to: points.left, createdAt: now });
+      skateTracks.push({ from: p.lastSkatePoints.right, to: points.right, createdAt: now });
+    }
+  }
+  p.lastSkatePoints = points;
+
+  if (p.lastScratchAngle === null) {
+    p.lastScratchAngle = movementAngle;
+  } else {
+    const turnAmount = Math.abs(Math.atan2(
+      Math.sin(movementAngle - p.lastScratchAngle),
+      Math.cos(movementAngle - p.lastScratchAngle)
+    ));
+    if (challengeRunning && turnAmount >= SCRATCH_TURN_THRESHOLD) {
+      addCachedIceScratch(p, movementAngle);
+      p.lastScratchAngle = movementAngle;
+    }
+  }
+}
+
+function updateIceEffects() {
+  if (!iceEffectsEnabled) return;
+  const now = performance.now();
+  if (frameCount % SKATE_TRACK_SAMPLE_FRAMES === 0) {
+    recordSkateTracks(player, now);
+    recordSkateTracks(cpu, now);
+  }
+  let expiredCount = 0;
+  while (expiredCount < skateTracks.length && now - skateTracks[expiredCount].createdAt > SKATE_TRACK_LIFETIME) {
+    expiredCount++;
+  }
+  if (expiredCount > 0) skateTracks.splice(0, expiredCount);
+}
+
+function drawIceEffects() {
+  if (!iceEffectsEnabled) return;
+  const now = performance.now();
+  ctx.save();
+  ctx.translate(FIELD_X, FIELD_Y);
+
+  ctx.beginPath();
+  ctx.moveTo(CORNER_R, 0);
+  ctx.lineTo(FIELD_W - CORNER_R, 0);
+  ctx.arcTo(FIELD_W, 0, FIELD_W, CORNER_R, CORNER_R);
+  ctx.lineTo(FIELD_W, FIELD_H - CORNER_R);
+  ctx.arcTo(FIELD_W, FIELD_H, FIELD_W - CORNER_R, FIELD_H, CORNER_R);
+  ctx.lineTo(CORNER_R, FIELD_H);
+  ctx.arcTo(0, FIELD_H, 0, FIELD_H - CORNER_R, CORNER_R);
+  ctx.lineTo(0, CORNER_R);
+  ctx.arcTo(0, 0, CORNER_R, 0, CORNER_R);
+  ctx.closePath();
+  ctx.clip();
+
+  ctx.drawImage(scratchLayer, 0, 0);
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 1.15;
+  for (let bucket = 0; bucket < TRACK_FADE_BUCKETS; bucket++) {
+    let hasSegments = false;
+    ctx.beginPath();
+    for (const track of skateTracks) {
+      const lifeRemaining = Math.max(0, 1 - (now - track.createdAt) / SKATE_TRACK_LIFETIME);
+      const trackBucket = Math.min(
+        TRACK_FADE_BUCKETS - 1,
+        Math.floor(lifeRemaining * TRACK_FADE_BUCKETS)
+      );
+      if (trackBucket !== bucket) continue;
+      ctx.moveTo(track.from.x, track.from.y);
+      ctx.lineTo(track.to.x, track.to.y);
+      hasSegments = true;
+    }
+    if (hasSegments) {
+      const bucketAlpha = ((bucket + 0.5) / TRACK_FADE_BUCKETS) * 0.24;
+      ctx.strokeStyle = `rgba(65, 111, 143, ${bucketAlpha})`;
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+}
 
 function drawField() {
   ctx.save();
@@ -1975,7 +2149,7 @@ function drawScoreboardOnCanvas() {
 function drawStands() {
   ctx.save();
   
-  const outerMargin = 10;
+  const outerMargin = 5;
   const outerX = FIELD_X - STAND_WIDTH - outerMargin;
   const outerY = FIELD_Y - STAND_WIDTH - outerMargin;
   const outerW = FIELD_W + 2 * (STAND_WIDTH + outerMargin);
@@ -2015,8 +2189,9 @@ function drawStands() {
     FIELD_X + FIELD_W/2, FIELD_Y + FIELD_H/2, CORNER_R,
     FIELD_X + FIELD_W/2, FIELD_Y + FIELD_H/2, outerR
   );
-  standGrad.addColorStop(0, '#2d2d4a');
-  standGrad.addColorStop(1, '#1a1a2e');
+  standGrad.addColorStop(0, 'rgba(45, 45, 64, 0.92)');
+  standGrad.addColorStop(0.72, 'rgba(82, 82, 104, 0.82)');
+  standGrad.addColorStop(1, 'rgba(120, 120, 140, 0.68)');
   ctx.fillStyle = standGrad;
   ctx.fill('evenodd');
   
@@ -2233,6 +2408,7 @@ function gameLoop() {
     updatePlayer();
     updateCPU();
     updatePuck(previousPuckX, previousPuckY);
+    updateIceEffects();
     if (crowdJumpTime > 0) crowdJumpTime--;
   }
   
@@ -2243,6 +2419,7 @@ function gameLoop() {
   drawBanners();
   drawScoreboardOnCanvas();
   drawField();
+  drawIceEffects();
   drawPlayer(cpu);
   drawPlayer(player);
   drawPuck();
