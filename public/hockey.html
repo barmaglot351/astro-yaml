@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Настольный хоккей</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e;
+    font-family: 'Segoe UI', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    color: #fff;
+  }
+  h1 {
+    margin-bottom: 15px;
+    font-size: 1.6em;
+    text-align: center;
+    letter-spacing: 2px;
+  }
+  .controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .controls button {
+    padding: 10px 20px;
+    border: 2px solid #fff;
+    background: transparent;
+    color: #fff;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 0.95em;
+    transition: all 0.3s;
+  }
+  .controls button:hover { background: rgba(255,255,255,0.15); }
+  .controls button.active { background: #e63946; border-color: #e63946; }
+  .controls button[data-layer="gridLayer"].active { background: #318bbd; border-color: #66c8ef; }
+  .controls button[data-layer="benchesLayer"].active { background: #87532c; border-color: #e0a063; }
+  .controls button[data-layer="standsLayer"].active { background: #f4a261; border-color: #f4a261; }
+  .board-container {
+    background: #0d0d1a;
+    padding: 15px;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    width: 100%;
+    max-width: 1700px;
+  }
+  .game-layout {
+    display: grid;
+    grid-template-columns: minmax(180px, 200px) minmax(0, 1200px) minmax(180px, 200px);
+    gap: 14px;
+    align-items: stretch;
+    width: 100%;
+    max-width: 1650px;
+  }
+  .game-layout .board-container { max-width: none; }
+  .team-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 10px;
+    border: 1px solid #415269;
+    border-radius: 16px;
+    background: #101b2b;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.25);
+  }
+  .team-panel h2 { margin-bottom: 5px; font-size: 0.82rem; text-align: center; letter-spacing: 0.08em; }
+  .team-panel.red h2 { color: #ff7584; }
+  .team-panel.blue h2 { color: #45c8fa; }
+  .player-toggle {
+    width: 100%;
+    padding: 9px 6px;
+    border: 1px solid #4b5c74;
+    border-radius: 8px;
+    background: #182435;
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+    transition: background 0.2s, opacity 0.2s;
+  }
+  .team-panel.red .player-toggle[aria-pressed="true"] { border-color: #e63946; color: #ff9aa4; }
+  .team-panel.blue .player-toggle[aria-pressed="true"] { border-color: #2196f3; color: #78c8ff; }
+  .player-toggle[aria-pressed="false"] { opacity: 0.45; text-decoration: line-through; }
+  .player-toggle:hover { background: #2c3c51; }
+  .player-choice { display: flex; align-items: center; justify-content: flex-start; gap: 6px; padding: 4px 6px; text-align: left; }
+  .player-copy { display: flex; min-width: 0; flex-direction: column; line-height: 1.05; }
+  .player-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.72rem; }
+  .player-copy small { margin-top: 3px; color: #a6b8ca; font-size: 0.63rem; }
+  .player-icon {
+    display: block;
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    background-repeat: no-repeat;
+    border-radius: 50%;
+    background-size: 160px 240px;
+    background-position: -62px var(--icon-y);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.2);
+  }
+  .team-panel.red .player-icon { background-image: url('red-player-icons.png'); }
+  .team-panel.blue .player-icon { background-image: url('blue-player-icons.png'); }
+  .player.is-hidden { display: none; }
+  #rink {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: #fff;
+    border-radius: 10px;
+  }
+  .layer { }
+  .layer.hidden { display: none; }
+  .player { cursor: grab; touch-action: none; }
+  .player[data-team="red"] { --chip-face: url(#chipRed); color: #900e15; }
+  .player[data-team="blue"] { --chip-face: url(#chipBlue); color: #06316e; }
+  .chip-number { font-family: 'Arial Black', Arial, sans-serif; font-size: 18px; font-weight: 900; text-anchor: middle; fill: #fff; stroke: #0006; stroke-width: 0.8; paint-order: stroke; }
+  .goalkeeper .chip-number { fill: currentColor; stroke: #fff; stroke-width: 0.5; }
+  .reserve-number { font-family: Arial, sans-serif; font-size: 8px; font-weight: 900; text-anchor: middle; fill: #fff; stroke: #0008; stroke-width: 0.6; paint-order: stroke; }
+  .bench-label { font-family: Arial, sans-serif; font-size: 8px; font-weight: 800; text-anchor: middle; letter-spacing: 1px; }
+  .goalkeeper:hover { filter: brightness(1.2); }
+  .player:active { cursor: grabbing; }
+  .player:hover .player-body { filter: brightness(1.2); }
+  #standsLayer[style*="none"] * { animation-play-state: paused; }
+  .crowd-wave { animation: stadiumWave 22s ease-in-out var(--wave-delay) infinite; }
+  @keyframes stadiumWave { 0%, 7%, 100% { transform: translateY(0); } 2%, 4% { transform: translateY(-7px); } }
+  .camera-flash { opacity: 0; animation: cameraFlash var(--flash-period) linear var(--flash-delay) infinite; }
+  @keyframes cameraFlash { 0%, 0.7%, 100% { opacity: 0; } 0.15%, 0.3% { opacity: 0.85; } }
+  .fan-flag { animation: flagSwing var(--duration) ease-in-out var(--delay) infinite; transform-origin: 0px 0px; }
+  .flag-cloth { animation: flagFlutter 0.85s ease-in-out var(--delay) infinite alternate; transform-origin: 0px -24px; }
+  @keyframes flagSwing { 0%, 100% { transform: rotate(-17deg); } 50% { transform: rotate(19deg); } }
+  @keyframes flagFlutter { from { transform: skewY(-7deg) scaleX(0.8); } to { transform: skewY(8deg) scaleX(1); } }
+  #standsLayer.goal-celebration .crowd-wave {
+    animation: goalCrowdJump 0.55s ease-in-out infinite;
+  }
+  #standsLayer.goal-celebration .camera-flash {
+    animation: goalCameraFlash 2.4s linear var(--flash-delay) infinite;
+  }
+  #standsLayer.goal-celebration .fan-flag { animation-duration: 0.7s; }
+  @keyframes goalCrowdJump {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(-1.5px, -5px); }
+    50% { transform: translate(0, -10px); }
+    75% { transform: translate(1.5px, -4px); }
+  }
+  @keyframes goalCameraFlash {
+    0%, 6%, 100% { opacity: 0; }
+    1%, 2% { opacity: 1; }
+  }
+  #standsLayer[style*="none"] * { animation-play-state: paused; }
+  @media (prefers-reduced-motion: reduce) {
+    .crowd-wave, .camera-flash, .fan-flag, .flag-cloth,
+    #standsLayer.goal-celebration .crowd-wave,
+    #standsLayer.goal-celebration .camera-flash,
+    #standsLayer.goal-celebration .fan-flag { animation: none; }
+    .camera-flash { display: none; }
+  }
+  .score-controls { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; font-size: 13px; color: #a6b8ca; }
+  .score-controls button { border: 1px solid #415269; border-radius: 7px; padding: 7px 12px; background: #182435; color: #fff; cursor: pointer; }
+  .score-controls button:hover { background: #2c3c51; }
+  .score-controls .blue { color: #45c8fa; }
+  .score-controls .red { color: #ff7584; }
+  button:focus-visible { outline: 2px solid #f5d66b; outline-offset: 3px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .info {
+    margin-top: 15px;
+    font-size: 0.85em;
+    opacity: 0.7;
+    text-align: center;
+  }
+  @media (max-width: 760px) {
+    .game-layout { grid-template-columns: 1fr; }
+    .team-panel { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+    .team-panel h2 { width: 100%; }
+    .player-toggle { width: auto; min-width: 42px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>🏒 НАСТОЛЬНЫЙ ХОККЕЙ 🏒</h1>
+
+
+<div class="controls">
+  <button class="active" data-layer="fieldLayer" onclick="toggleLayer('fieldLayer', this)">🏟️ Поле</button>
+  <button data-layer="gridLayer" onclick="toggleLayer('gridLayer', this)">🔲 Сетка</button>
+  <button class="active" data-layer="playersLayer" onclick="toggleLayer('playersLayer', this)">👥 Игроки</button>
+  <button class="active" data-layer="refereeLayer" onclick="toggleLayer('refereeLayer', this)">🦓 Судья</button>
+  <button class="active" data-layer="benchesLayer" onclick="toggleLayer('benchesLayer', this)">🪑 Скамейки</button>
+  <button class="active" data-layer="goalsLayer" onclick="toggleLayer('goalsLayer', this)">🥅 Ворота</button>
+  <button class="active" data-layer="standsLayer" onclick="toggleLayer('standsLayer', this)">🏟️ Трибуны</button>
+</div>
+
+<div class="game-layout">
+  <aside class="team-panel red" aria-label="Управление игроками команды Метеор">
+    <h2>МЕТЕОР</h2>
+    <button class="player-toggle" id="redAI" type="button" aria-pressed="false" onclick="HockeyAI.toggle('red')">ИИ: выключен</button>
+    <button class="player-toggle player-choice" type="button" aria-label="Стенка Стас, Метеор, вратарь, номер 0" aria-pressed="true" onclick="togglePlayer('red', '0', this)"><span class="player-icon" style="--icon-y:-202px" aria-hidden="true"></span><span class="player-copy"><span class="player-name">Стенка Стас</span><small>№ 0 · вратарь</small></span></button>
+    <button class="player-toggle player-choice" type="button" aria-label="Кувалда Джо, Метеор, игрок, номер 1" aria-pressed="true" onclick="togglePlayer('red', '1', this)"><span class="player-icon" style="--icon-y:-2px" aria-hidden="true"></span><span class="player-copy"><span class="player-name">Кувалда Джо</span><small>№ 1</small></span></button>
+    <button class="player-toggle player-choice" type="button" aria-label="Клюха, Метеор, игрок, номер 2" aria-pressed="true" onclick="togglePlayer('red', '2', this)"><span class="player-icon" style="--icon-y:-42px" aria-hidden="true"></span><span class="player-copy"><span class="player-name">Клюха</span><small>№ 2</small></span></button>
+    <button class="player-toggle player-choice" type="button" aria-label="Шайболёт, Метеор, игрок, номер 3" aria-pressed="true" onclick="togglePlayer('red', '3', this)"><span class="player-icon" style="--icon-y:-82px" aria-hidden="true"></span><span class="player-copy"><span class="player-name">Шайболёт</span><small>№ 3</small></span></button>
+    <button class="player-toggle player-choice" type="button" aria-label="Лёд Петрович, Метеор, игрок, номер 4" aria-pressed="true" onclick="togglePlayer('red', '4', this)"><span class="player-icon" style="--icon-y:-122px" aria-hidden="true"></span><span class="player-copy"><span class="player-name">Лёд Петрович</span><small>№ 4</small></span></button>
+    <button class="player-toggle player-choice" type="button" aria-label="Усатый Боб, Метеор, игрок, номер 5" aria-pressed="true" onclick="togglePlayer('red', '5', this)"><span class="player-icon" style="--icon-y:-162px" aria-hidden="true"></span><span class="player-copy"><span class="player-name">Усатый Боб</span><small>№ 5</small></span></button>
+  </aside>
+
+  <div class="board-container">
+  <svg id="rink" viewBox="-90 -90 1380 880" width="1380" height="880" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="chipRed" x1="0" y1="0" x2="1" y2="1">
+        <stop stop-color="#ff6559"/><stop offset="0.42" stop-color="#df251f"/><stop offset="1" stop-color="#9d0c13"/>
+      </linearGradient>
+      <linearGradient id="chipBlue" x1="0" y1="0" x2="1" y2="1">
+        <stop stop-color="#489ff4"/><stop offset="0.42" stop-color="#0863c5"/><stop offset="1" stop-color="#063479"/>
+      </linearGradient>
+      <linearGradient id="chipWhite" x1="0" y1="0" x2="0.7" y2="1">
+        <stop stop-color="#ffffff"/><stop offset="1" stop-color="#d9dfe3"/>
+      </linearGradient>
+      <g id="chipHelmet">
+        <path d="M-8,-7 Q-8,-15 0,-15 Q8,-15 8,-7 L9,-4 H-9 Z" fill="url(#chipWhite)" stroke="var(--helmet-outline, #bcc3c8)" stroke-width="0.6"/>
+        <path d="M-9,-6 H9 M-2,-13 H3" fill="none" stroke="var(--helmet-outline, #aeb5bb)" stroke-width="0.7"/>
+        <path d="M-7,-3 V0 M7,-3 V0" stroke="var(--helmet-outline, #f7f7f5)" stroke-width="2.3" stroke-linecap="round"/>
+      </g>
+      <pattern id="refereeStripes" width="8" height="8" patternUnits="userSpaceOnUse">
+        <rect width="8" height="8" fill="#f7f7f4"/>
+        <rect width="4" height="8" fill="#20252c"/>
+      </pattern>
+      <g id="chipMask">
+        <path d="M-7,-9 Q-7,-16 0,-16 Q7,-16 7,-9 L6,-3 Q0,3 -6,-3 Z" fill="url(#chipWhite)" stroke="#171b20" stroke-width="0.8"/>
+        <path d="M-5,-10 L-1,-9 M1,-9 L5,-10" stroke="#171b20" stroke-width="1.4"/>
+        <path d="M-6,-7 H6 M-5,-4 H5 M-3,-8 V-2 M0,-8 V0 M3,-8 V-2" fill="none" stroke="#171b20" stroke-width="0.8"/>
+      </g>
+      <g id="chipDisc">
+        <ellipse cx="1" cy="9" rx="20" ry="18" fill="#000" opacity="0.16"/>
+        <circle cy="7" r="19" fill="currentColor"/>
+        <circle cy="3" r="19" fill="var(--chip-face)" stroke="currentColor" stroke-width="0.8"/>
+        <circle cy="3" r="17.3" fill="none" stroke="#fff" stroke-opacity="0.32" stroke-width="0.7"/>
+        <path d="M-16,-3 A17,17 0 0 1 8,-12" fill="none" stroke="#fff" stroke-opacity="0.65" stroke-width="0.9" stroke-linecap="round"/>
+      </g>
+      <g id="reserveSkater">
+        <circle cy="-7" r="6" fill="#e7b98f" stroke="#fff" stroke-width="0.6"/>
+        <rect x="-9" y="-2" width="18" height="19" rx="4" fill="currentColor" stroke="#fff" stroke-width="0.8"/>
+        <path d="M-8,4 L-13,13 M8,4 L13,13" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+        <path d="M-6,16 V23 M6,16 V23" stroke="#172231" stroke-width="4" stroke-linecap="round"/>
+        <path d="M-9,24 H-3 M3,24 H9" stroke="#c7d6e2" stroke-width="1.5" stroke-linecap="round"/>
+        <use href="#chipHelmet" transform="translate(0 -1) scale(0.75)"/>
+      </g>
+      <radialGradient id="iceGrad" cx="50%" cy="50%" r="70%">
+        <stop offset="0%" stop-color="#ffffff"/>
+        <stop offset="100%" stop-color="#e8f0f8"/>
+      </radialGradient>
+      <pattern id="goalNet" width="5" height="5" patternUnits="userSpaceOnUse">
+        <rect width="5" height="5" fill="#eff5fa" fill-opacity=".75"/>
+        <path d="M5,0 H0 V5" fill="none" stroke="#7e91a3" stroke-width=".65"/>
+      </pattern>
+      <pattern id="mathGrid" x="30" y="30" width="76" height="80" patternUnits="userSpaceOnUse">
+        <path d="M19,0 V80 M38,0 V80 M57,0 V80 M0,20 H76 M0,40 H76 M0,60 H76"
+              fill="none" stroke="#7bc9eb" stroke-width="0.8" opacity="0.28"/>
+        <path d="M76,0 H0 V80" fill="none" stroke="#55b8e2" stroke-width="1.5" opacity="0.5"/>
+      </pattern>
+      <clipPath id="iceClip">
+        <rect x="30" y="30" width="1140" height="640" rx="180"/>
+      </clipPath>
+    </defs>
+
+    <rect x="-90" y="-90" width="1380" height="880" rx="24" fill="#38291d"/>
+    <rect x="-79" y="-79" width="1358" height="858" rx="18" fill="#080d19"/>
+    <g id="standsLayer" aria-label="Трибуны со зрителями" pointer-events="none">
+      <rect x="-24" y="-24" width="1248" height="748" rx="234"
+            fill="none" stroke="#404457" stroke-width="106"/>
+      <rect x="-77" y="-77" width="1354" height="854" rx="287"
+            fill="none" stroke="#62667e" stroke-width="4"/>
+      <g id="seatRows"></g>
+      <g id="crowd"></g>
+      <g id="benchesLayer" pointer-events="none" aria-label="Скамейки запасных игроков">
+        <!-- Скамейка красной команды. Верхнее стекло частично скрывается за бортом. -->
+        <g class="team-bench" aria-label="Запасные красной команды" transform="translate(0 -17)">
+          <rect x="280" y="687" width="220" height="58" rx="7" fill="#07111c" stroke="#d8323f" stroke-width="2"/>
+          <path d="M285,690 V720 M337,690 V720 M390,690 V720 M443,690 V720 M495,690 V720"
+                stroke="#bde9fa" stroke-width="1.2" opacity="0.58"/>
+          <rect x="285" y="690" width="210" height="30" fill="#a9dff3" opacity="0.11"/>
+          <rect x="286" y="724" width="208" height="6" rx="3" fill="#b26a35" stroke="#e0a063" stroke-width="1"/>
+          <rect x="280" y="735" width="220" height="10" rx="4" fill="#99121c"/>
+          <text class="bench-label" x="390" y="743" fill="#fff">ЗАПАСНЫЕ · МЕТЕОР</text>
+          <g color="#d9252f" transform="translate(298,703) scale(.88)"><use href="#reserveSkater"/><text class="reserve-number" y="12">6</text></g>
+          <g color="#d9252f" transform="translate(324,703) scale(.88)"><use href="#reserveSkater"/><text class="reserve-number" y="12">7</text></g>
+          <g color="#d9252f" transform="translate(350,703) scale(.88)"><use href="#reserveSkater"/><text class="reserve-number" y="12">8</text></g>
+          <g color="#d9252f" transform="translate(376,703) scale(.88)"><use href="#reserveSkater"/><text class="reserve-number" y="12">9</text></g>
+          <g color="#d9252f" transform="translate(402,703) scale(.88)"><use href="#reserveSkater"/><text class="reserve-number" y="12">10</text></g>
+          <g color="#d9252f" transform="translate(428,703) scale(.88)"><use href="#reserveSkater"/><text class="reserve-number" y="12">11</text></g>
+          <g color="#d9252f" transform="translate(454,703) scale(.88)"><use href="#reserveSkater"/><text class="reserve-number" y="12">12</text></g>
+          <g color="#d9252f" transform="translate(480,703) scale(.88)"><use href="#reserveSkater"/><text class="reserve-number" y="12">13</text></g>
+        </g>
+        <!-- Скамейка синей команды. -->
+        <g class="team-bench" aria-label="Запасные синей команды" transform="translate(0 -17)">
+          <rect x="700" y="687" width="220" height="58" rx="7" fill="#07111c" stroke="#2486df" stroke-width="2"/>
+          <path d="M705,690 V720 M757,690 V720 M810,690 V720 M863,690 V720 M915,690 V720"
+                stroke="#bde9fa" stroke-width="1.2" opacity="0.58"/>
+          <rect x="705" y="690" width="210" height="30" fill="#a9dff3" opacity="0.11"/>
+          <rect x="706" y="724" width="208" height="6" rx="3" fill="#b26a35" stroke="#e0a063" stroke-width="1"/>
+          <rect x="700" y="735" width="220" height="10" rx="4" fill="#07509b"/>
+          <text class="bench-label" x="810" y="743" fill="#fff">ЗАПАСНЫЕ · ВЫМПЕЛ</text>
+          <g color="#126bc5" transform="translate(718,703) scale(.88)"><use href="#reserveSkater"/><text class="reserve-number" y="12">6</text></g>
+          <g color="#126bc5" transform="translate(744,703) scale(.88)"><use href="#reserveSkater"/><text class="reserve-number" y="12">7</text></g>
+          <g color="#126bc5" transform="translate(770,703) scale(.88)"><use href="#reserveSkater"/><text class="reserve-number" y="12">8</text></g>
+          <g color="#126bc5" transform="translate(796,703) scale(.88)"><use href="#reserveSkater"/><text class="reserve-number" y="12">9</text></g>
+          <g color="#126bc5" transform="translate(822,703) scale(.88)"><use href="#reserveSkater"/><text class="reserve-number" y="12">10</text></g>
+          <g color="#126bc5" transform="translate(848,703) scale(.88)"><use href="#reserveSkater"/><text class="reserve-number" y="12">11</text></g>
+          <g color="#126bc5" transform="translate(874,703) scale(.88)"><use href="#reserveSkater"/><text class="reserve-number" y="12">12</text></g>
+          <g color="#126bc5" transform="translate(900,703) scale(.88)"><use href="#reserveSkater"/><text class="reserve-number" y="12">13</text></g>
+        </g>
+      </g>
+    </g>
+    <g id="advertisingLayer" aria-label="Реклама на бортах" pointer-events="none">
+      <rect x="22" y="22" width="1156" height="656" rx="188"
+            fill="none" stroke="#aebbc8" stroke-width="17"/>
+      <g id="boardAds"></g>
+    </g>
+
+    <!-- ==================== СЛОЙ ПОЛЯ ==================== -->
+    <g id="fieldLayer" clip-path="url(#iceClip)" aria-label="Лёд и разметка площадки">
+      <rect x="30" y="30" width="1140" height="640" rx="180" fill="#fff"/>
+      <!-- Цветная хоккейная разметка: красные линии и точки, голубые границы зон. -->
+      <g id="rinkMarkings" fill="none" stroke-width="3.5">
+        <rect x="32" y="32" width="1136" height="636" rx="178" stroke="#59636d" stroke-width="5"/>
+        <!-- Центральная линия, границы зон и линии ворот доходят до бортов. -->
+        <path d="M600,30 V670" stroke="#d51f36" stroke-width="4"/>
+        <path d="M440,30 V670 M760,30 V670" stroke="#3586aa" stroke-width="5"/>
+        <path d="M100,30 V670 M1100,30 V670" stroke="#d51f36" stroke-width="4"/>
+
+        <circle cx="600" cy="350" r="87" stroke="#3586aa"/>
+        <circle cx="600" cy="350" r="7" fill="#3586aa" stroke="#fff" stroke-width="2"/>
+
+        <!-- Пятачки: прямая сторона совпадает с передней линией ворот,
+             дуга левых ворот обращена вправо, правых — влево, на лёд. -->
+        <path id="leftGoalCrease" d="M100,300 A50,50 0 0 1 100,400 Z"
+              fill="#56a9c5" fill-opacity="0.72" stroke="#d51f36" stroke-width="3"/>
+        <path id="rightGoalCrease" d="M1100,300 A50,50 0 0 0 1100,400 Z"
+              fill="#56a9c5" fill-opacity="0.72" stroke="#d51f36" stroke-width="3"/>
+
+        <!-- Четыре круга с парными засечками и отметками у точки вбрасывания. -->
+        <g class="faceoff-circle" transform="translate(220, 190)" stroke="#d51f36">
+          <circle r="87"/>
+          <circle r="7" fill="#d51f36" stroke="none"/>
+          <path d="M-14,-86 V-97 M14,-86 V-97 M-14,86 V97 M14,86 V97
+                   M-14,-20 V20 M14,-20 V20
+                   M-14,-4 H-38 M-14,4 H-38 M14,-4 H38 M14,4 H38"/>
+        </g>
+        <g class="faceoff-circle" transform="translate(220, 510)" stroke="#d51f36">
+          <circle r="87"/>
+          <circle r="7" fill="#d51f36" stroke="none"/>
+          <path d="M-14,-86 V-97 M14,-86 V-97 M-14,86 V97 M14,86 V97
+                   M-14,-20 V20 M14,-20 V20
+                   M-14,-4 H-38 M-14,4 H-38 M14,-4 H38 M14,4 H38"/>
+        </g>
+        <g class="faceoff-circle" transform="translate(980, 190)" stroke="#d51f36">
+          <circle r="87"/>
+          <circle r="7" fill="#d51f36" stroke="none"/>
+          <path d="M-14,-86 V-97 M14,-86 V-97 M-14,86 V97 M14,86 V97
+                   M-14,-20 V20 M14,-20 V20
+                   M-14,-4 H-38 M-14,4 H-38 M14,-4 H38 M14,4 H38"/>
+        </g>
+        <g class="faceoff-circle" transform="translate(980, 510)" stroke="#d51f36">
+          <circle r="87"/>
+          <circle r="7" fill="#d51f36" stroke="none"/>
+          <path d="M-14,-86 V-97 M14,-86 V-97 M-14,86 V97 M14,86 V97
+                   M-14,-20 V20 M14,-20 V20
+                   M-14,-4 H-38 M-14,4 H-38 M14,-4 H38 M14,4 H38"/>
+        </g>
+
+        <!-- Точки вбрасывания в нейтральной зоне. -->
+        <g fill="#d51f36" stroke="none">
+          <circle cx="472" cy="204" r="7"/>
+          <circle cx="728" cy="204" r="7"/>
+          <circle cx="472" cy="496" r="7"/>
+          <circle cx="728" cy="496" r="7"/>
+        </g>
+        <!-- Судейская зона у нижнего борта. -->
+        <path id="refereeCrease" d="M517,670 A83,83 0 0 1 683,670" stroke="#d51f36"/>
+      </g>
+    </g>
+
+    <!-- ==================== СЛОЙ КООРДИНАТНОЙ СЕТКИ ==================== -->
+    <g id="gridLayer" style="display:none" clip-path="url(#iceClip)" pointer-events="none" aria-label="Координатная сетка с буквами и цифрами">
+      <rect x="30" y="30" width="1140" height="640" fill="url(#mathGrid)"/>
+      <g id="gridLabels"></g>
+    </g>
+
+    <!-- ==================== СЛОЙ ИГРОКОВ ==================== -->
+    <g id="playersLayer">
+      <!-- Команда КРАСНАЯ -->
+      <g class="player" data-team="red" data-number="1" transform="translate(380, 150)">
+        <g class="player-body">
+          <use href="#chipDisc"/>
+          <use href="#chipHelmet"/>
+          <text class="chip-number" x="0" y="18">1</text>
+        </g>
+      </g>
+
+      <g class="player" data-team="red" data-number="2" transform="translate(380, 320)">
+        <g class="player-body">
+          <use href="#chipDisc"/>
+          <use href="#chipHelmet"/>
+          <text class="chip-number" x="0" y="18">2</text>
+        </g>
+      </g>
+
+      <g class="player" data-team="red" data-number="3" transform="translate(375, 490)">
+        <g class="player-body">
+          <use href="#chipDisc"/>
+          <use href="#chipHelmet"/>
+          <text class="chip-number" x="0" y="18">3</text>
+        </g>
+      </g>
+
+      <g class="player" data-team="red" data-number="4" transform="translate(230, 220)">
+        <g class="player-body">
+          <use href="#chipDisc"/>
+          <use href="#chipHelmet"/>
+          <text class="chip-number" x="0" y="18">4</text>
+        </g>
+      </g>
+
+      <g class="player" data-team="red" data-number="5" transform="translate(235, 460)">
+        <g class="player-body">
+          <use href="#chipDisc"/>
+          <use href="#chipHelmet"/>
+          <text class="chip-number" x="0" y="18">5</text>
+        </g>
+      </g>
+
+      <!-- Команда СИНЯЯ -->
+      <g class="player" data-team="blue" data-number="1" transform="translate(805, 140)">
+        <g class="player-body">
+          <use href="#chipDisc"/>
+          <use href="#chipHelmet"/>
+          <text class="chip-number" x="0" y="18">1</text>
+        </g>
+      </g>
+
+      <g class="player" data-team="blue" data-number="2" transform="translate(810, 310)">
+        <g class="player-body">
+          <use href="#chipDisc"/>
+          <use href="#chipHelmet"/>
+          <text class="chip-number" x="0" y="18">2</text>
+        </g>
+      </g>
+
+      <g class="player" data-team="blue" data-number="3" transform="translate(815, 470)">
+        <g class="player-body">
+          <use href="#chipDisc"/>
+          <use href="#chipHelmet"/>
+          <text class="chip-number" x="0" y="18">3</text>
+        </g>
+      </g>
+
+      <g class="player" data-team="blue" data-number="4" transform="translate(980, 200)">
+        <g class="player-body">
+          <use href="#chipDisc"/>
+          <use href="#chipHelmet"/>
+          <text class="chip-number" x="0" y="18">4</text>
+        </g>
+      </g>
+
+      <g class="player" data-team="blue" data-number="5" transform="translate(980, 460)">
+        <g class="player-body">
+          <use href="#chipDisc"/>
+          <use href="#chipHelmet"/>
+          <text class="chip-number" x="0" y="18">5</text>
+        </g>
+      </g>
+
+      <!-- Вратари входят в слой игроков, поэтому скрываются общей кнопкой «Игроки». -->
+      <g class="player goalkeeper" data-team="red" data-number="0" aria-label="Вратарь команды Метеор, номер 0" transform="translate(125, 335)">
+        <g class="player-body">
+          <use href="#chipDisc"/>
+          <circle cy="3" r="15.4" fill="url(#chipWhite)"/>
+          <use href="#chipMask" transform="translate(0 3)"/>
+          <text class="chip-number" x="0" y="18">0</text>
+        </g>
+      </g>
+      <g class="player goalkeeper" data-team="blue" data-number="0" aria-label="Вратарь команды Вымпел, номер 0" transform="translate(1075, 335)">
+        <g class="player-body">
+          <use href="#chipDisc"/>
+          <circle cy="3" r="15.4" fill="url(#chipWhite)"/>
+          <use href="#chipMask" transform="translate(0 3)"/>
+          <text class="chip-number" x="0" y="18">0</text>
+        </g>
+      </g>
+    </g>
+
+    <g id="refereeLayer" pointer-events="none" aria-label="Судья, номер 99">
+      <g id="referee" transform="translate(600, 110)" style="color:#20252c; --chip-face:url(#refereeStripes)">
+        <title>Судья № 99</title>
+        <use href="#chipDisc"/>
+        <use href="#chipHelmet" style="--helmet-outline:#000"/>
+        <rect x="-13" y="1" width="26" height="19" rx="5" fill="#20252c" stroke="#fff" stroke-width="0.8"/>
+        <text x="0" y="16" text-anchor="middle" fill="#fff" font-family="'Segoe UI', sans-serif" font-size="17" font-weight="900">99</text>
+      </g>
+    </g>
+
+    <!-- ==================== СЛОЙ ВОРОТ ==================== -->
+    <g id="goalsLayer">
+      <!-- Левые ворота -->
+      <g transform="translate(100, 350)">
+        <path id="leftGoalGlow" d="M0,-50 H-18 Q-30,-50 -30,-38 V38 Q-30,50 -18,50 H0 Z" fill="currentColor" fill-opacity="0.25" stroke="currentColor" stroke-width="16" stroke-linejoin="round" opacity="0" pointer-events="none"/>
+        <path d="M0,-50 H-18 Q-30,-50 -30,-38 V38 Q-30,50 -18,50 H0 Z" fill="url(#goalNet)" pointer-events="none"/>
+        <path d="M0,-50 H-18 Q-30,-50 -30,-38 V38 Q-30,50 -18,50 H0" fill="none" stroke="#d32f2f" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+      </g>
+
+      <!-- Правые ворота -->
+      <g transform="translate(1100, 350)">
+        <path id="rightGoalGlow" d="M0,-50 H18 Q30,-50 30,-38 V38 Q30,50 18,50 H0 Z" fill="currentColor" fill-opacity="0.25" stroke="currentColor" stroke-width="16" stroke-linejoin="round" opacity="0" pointer-events="none"/>
+        <path d="M0,-50 H18 Q30,-50 30,-38 V38 Q30,50 18,50 H0 Z" fill="url(#goalNet)" pointer-events="none"/>
+        <path d="M0,-50 H18 Q30,-50 30,-38 V38 Q30,50 18,50 H0" fill="none" stroke="#1565c0" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+      </g>
+    </g>
+    <g id="scoreboard" aria-label="Табло со счётом">
+      <rect x="486" y="-67" width="228" height="62" rx="5" fill="#020911" stroke="#e7c95d" stroke-width="2"/>
+      <path d="M560,-57 V-15 M640,-57 V-15" stroke="#223747"/>
+      <text x="523" y="-50" text-anchor="middle" fill="#45c8fa" font-size="10" font-weight="bold">ВЫМПЕЛ</text>
+      <text id="blueScore" x="523" y="-18" text-anchor="middle" fill="#45c8fa" font-family="monospace" font-size="32" font-weight="bold">0</text>
+      <text x="677" y="-50" text-anchor="middle" fill="#ff5265" font-size="10" font-weight="bold">МЕТЕОР</text>
+      <text id="redScore" x="677" y="-18" text-anchor="middle" fill="#ff5265" font-family="monospace" font-size="32" font-weight="bold">0</text>
+      <text x="600" y="-46" text-anchor="middle" fill="#f5d66b" font-size="11" font-weight="bold">● LIVE</text>
+      <text x="600" y="-20" text-anchor="middle" fill="#fff" font-size="24" font-family="monospace">:</text>
+    </g>
+    <circle id="puck" cx="600" cy="350" r="7" fill="#1a1a1a" stroke="#fff" stroke-width="1.5" pointer-events="none"/>
+    <g transform="translate(600 350)" pointer-events="none" aria-hidden="true">
+      <g id="goalBanner" opacity="0">
+        <text y="32" text-anchor="middle" font-family="'Arial Black', Arial, sans-serif" font-size="110" font-weight="900" fill="currentColor" stroke="#fff" stroke-width="9" paint-order="stroke" stroke-linejoin="round">ГОЛ!</text>
+      </g>
+    </g>
+  </svg>
+  </div>
+
+  <aside class="team-panel blue" aria-label="Управление игроками команды Вымпел">
+    <h2>ВЫМПЕЛ</h2>
+    <button class="player-toggle" id="blueAI" type="button" aria-pressed="false" onclick="HockeyAI.toggle('blue')">ИИ: выключен</button>
+    <button class="player-toggle player-choice" type="button" aria-label="Сейв Семён, Вымпел, вратарь, номер 0" aria-pressed="true" onclick="togglePlayer('blue', '0', this)"><span class="player-icon" style="--icon-y:-202px" aria-hidden="true"></span><span class="player-copy"><span class="player-name">Сейв Семён</span><small>№ 0 · вратарь</small></span></button>
+    <button class="player-toggle player-choice" type="button" aria-label="Вжух Вова, Вымпел, игрок, номер 1" aria-pressed="true" onclick="togglePlayer('blue', '1', this)"><span class="player-icon" style="--icon-y:-2px" aria-hidden="true"></span><span class="player-copy"><span class="player-name">Вжух Вова</span><small>№ 1</small></span></button>
+    <button class="player-toggle player-choice" type="button" aria-label="Пас Пашка, Вымпел, игрок, номер 2" aria-pressed="true" onclick="togglePlayer('blue', '2', this)"><span class="player-icon" style="--icon-y:-42px" aria-hidden="true"></span><span class="player-copy"><span class="player-name">Пас Пашка</span><small>№ 2</small></span></button>
+    <button class="player-toggle player-choice" type="button" aria-label="Шмяк Макс, Вымпел, игрок, номер 3" aria-pressed="true" onclick="togglePlayer('blue', '3', this)"><span class="player-icon" style="--icon-y:-82px" aria-hidden="true"></span><span class="player-copy"><span class="player-name">Шмяк Макс</span><small>№ 3</small></span></button>
+    <button class="player-toggle player-choice" type="button" aria-label="Конёк Костя, Вымпел, игрок, номер 4" aria-pressed="true" onclick="togglePlayer('blue', '4', this)"><span class="player-icon" style="--icon-y:-122px" aria-hidden="true"></span><span class="player-copy"><span class="player-name">Конёк Костя</span><small>№ 4</small></span></button>
+    <button class="player-toggle player-choice" type="button" aria-label="Борода Юра, Вымпел, игрок, номер 5" aria-pressed="true" onclick="togglePlayer('blue', '5', this)"><span class="player-icon" style="--icon-y:-162px" aria-hidden="true"></span><span class="player-copy"><span class="player-name">Борода Юра</span><small>№ 5</small></span></button>
+  </aside>
+</div>
+
+<div class="score-controls" aria-label="Управление счётом">
+  <button id="pauseAI" type="button" aria-pressed="false" onclick="HockeyAI.start()">Старт матча</button>
+  <button type="button" onclick="HockeyAI.reset()">Шайба в центр</button>
+  <span>Счёт вручную:</span>
+  <button onclick="changeScore('blue', -1)" aria-label="Убавить гол синим">−</button>
+  <button class="blue" onclick="changeScore('blue', 1)">Вымпел +1</button>
+  <button class="red" onclick="changeScore('red', 1)">Метеор +1</button>
+  <button onclick="changeScore('red', -1)" aria-label="Убавить гол красным">−</button>
+  <button onclick="resetScore()">Сброс</button>
+  <span id="scoreStatus" class="sr-only" aria-live="polite"></span>
+</div>
+<div class="info">💡 Кнопка «Сетка» включает координатные сектора. Кнопка «Игроки» скрывает обе команды, включая вратарей. Боковые панели управляют игроками по номерам.</div>
+
+<p id="aiStatus" class="info" role="status" aria-live="polite">Включите ИИ одной или обеих команд. Отключённые по номерам игроки не участвуют в игре.</p>
+<script>
+  function toggleLayer(layerId, btn) {
+    var layer = document.getElementById(layerId);
+    if (layer.style.display === 'none') {
+      layer.style.display = '';
+      btn.classList.add('active');
+    } else {
+      layer.style.display = 'none';
+      btn.classList.remove('active');
+    }
+  }
+
+  // Скамейки расположены поверх борта, но отделены от слоя трибун.
+  (function liftBenchesLayer() {
+    var benches = document.getElementById('benchesLayer');
+    var rink = document.getElementById('rink');
+    rink.appendChild(benches);
+  })();
+
+  function togglePlayer(team, number, btn) {
+    var player = document.querySelector('.player[data-team="' + team + '"][data-number="' + number + '"]');
+    if (!player) return;
+    var isHidden = player.classList.toggle('is-hidden');
+    btn.setAttribute('aria-pressed', String(!isHidden));
+  }
+
+  (function createGridLabels() {
+    var ns = 'http://www.w3.org/2000/svg';
+    var labels = document.getElementById('gridLabels');
+
+    function addLabel(value, x, y) {
+      var text = document.createElementNS(ns, 'text');
+      text.setAttribute('x', x);
+      text.setAttribute('y', y);
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('dominant-baseline', 'middle');
+      text.setAttribute('fill', '#247fa9');
+      text.setAttribute('stroke', '#ffffff');
+      text.setAttribute('stroke-width', '3');
+      text.setAttribute('paint-order', 'stroke');
+      text.setAttribute('font-size', '14');
+      text.setAttribute('font-weight', '700');
+      text.setAttribute('opacity', '0.68');
+      text.textContent = value;
+      labels.appendChild(text);
+    }
+
+    for (var column = 0; column < 15; column++) {
+      var letter = String.fromCharCode(65 + column);
+      var x = 68 + column * 76;
+      addLabel(letter, x, 112);
+      addLabel(letter, x, 588);
+    }
+
+    for (var row = 0; row < 8; row++) {
+      var y = 70 + row * 80;
+      var edgeX = row === 0 || row === 7 ? 110 : 48;
+      addLabel(String(row + 1), edgeX, y);
+      addLabel(String(row + 1), 1200 - edgeX, y);
+    }
+  })();
+
+  // Параллельные замкнутые ряды повторяют геометрию катка, включая все четыре угла.
+  (function createArena() {
+    var ns = 'http://www.w3.org/2000/svg';
+    function el(name, attrs, parent) {
+      var node = document.createElementNS(ns, name);
+      for (var key in attrs) node.setAttribute(key, attrs[key]);
+      if (parent) parent.appendChild(node);
+      return node;
+    }
+    function contour(offset) {
+      var r = 180 + offset, left = 30 - offset, right = 1170 + offset;
+      var top = 30 - offset, bottom = 670 + offset;
+      return 'M210,' + top + ' H990 A' + r + ',' + r + ' 0 0 1 ' + right + ',210' +
+        ' V490 A' + r + ',' + r + ' 0 0 1 990,' + bottom +
+        ' H210 A' + r + ',' + r + ' 0 0 1 ' + left + ',490' +
+        ' V210 A' + r + ',' + r + ' 0 0 1 210,' + top + ' Z';
+    }
+    var shirts = ['#f65c64', '#47b4ef', '#ffd75a', '#68d3b0', '#ad83e5', '#e8edf7', '#ed9852'];
+    var skins = ['#f8d2ad', '#dba27b', '#a66b48', '#724936'];
+    var crowd = document.getElementById('crowd');
+    var seats = document.getElementById('seatRows');
+    // Вместо тысяч анимируемых фигур — 40 кэшируемых изображений секторов.
+    var sectors = [];
+    for (var sector = 0; sector < 40; sector++) {
+      sectors.push(el('g', {class: 'crowd-wave', style: '--wave-delay:' + (4 + sector / 40 * 8) + 's'}, crowd));
+    }
+    var effects = el('g', {}, crowd);
+    for (var row = 0; row < 7; row++) {
+      var path = el('path', {d: contour(23 + row * 12), fill: 'none',
+        stroke: row % 2 ? '#646879' : '#54586d', 'stroke-width': 10}, seats);
+      var length = path.getTotalLength();
+      var count = Math.floor(length / 10);
+      for (var i = 0; i < count; i++) {
+        // Небольшие проходы разделяют секторы.
+        if (i % 43 === 0 || i % 43 === 1) continue;
+        var p = path.getPointAtLength((i + (row % 2) * 0.5) * length / count);
+        if (p.x > 478 && p.x < 722 && p.y < -3) continue;
+        var seed = i * 17 + row * 31;
+        var fan = el('g', {transform: 'translate(' + p.x + ' ' + p.y + ')'}, sectors[Math.floor(i / count * 40)]);
+        el('rect', {x: -3.5, y: 0, width: 7, height: 5, rx: 1.5, fill: '#242b40'}, fan);
+        var body = fan;
+        el('rect', {x: -2.4, y: -1, width: 4.8, height: 5.7, rx: 1.2, fill: shirts[seed % shirts.length]}, body);
+        el('circle', {cx: 0, cy: -3, r: 2.1, fill: skins[(seed + row) % skins.length]}, body);
+        if (seed % 7 === 0) {
+          el('path', {d: 'M-2,1 L-4,-6 M2,1 L4,-6',
+            fill: 'none', stroke: skins[seed % skins.length], 'stroke-width': 1.5, 'stroke-linecap': 'round'}, body);
+        }
+        if (seed % 37 === 0) {
+          el('path', {d: 'M-4,-5 H4', stroke: '#ffe792', 'stroke-width': 2}, body);
+        }
+        if (seed % 83 === 0) {
+          var flash = el('g', {class: 'camera-flash', transform: 'translate(' + p.x + ' ' + p.y + ')',
+            style: '--flash-period:' + (19 + seed % 17) + 's;--flash-delay:-' + (seed % 137 * 0.19) + 's'}, effects);
+          el('circle', {cx: 0, cy: -5, r: 7, fill: '#c6eaff', opacity: 0.3}, flash);
+          el('path', {d: 'M-6,-5 H6 M0,-11 V1', stroke: '#e6f7ff', 'stroke-width': 1.2}, flash);
+          el('circle', {cx: 0, cy: -5, r: 2.2, fill: '#fff'}, flash);
+        }
+      }
+    }
+    // SVG-картинки сохраняют резкость при масштабировании, но не содержат
+    // отдельных DOM-элементов зрителей в игровом SVG. Браузер кэширует их отрисовку.
+    sectors.forEach(function (group) {
+      if (!group.firstChild) return;
+      var bounds = group.getBBox();
+      var x = bounds.x - 2, y = bounds.y - 2, w = bounds.width + 4, h = bounds.height + 4;
+      var picture = document.createElementNS(ns, 'svg');
+      picture.setAttribute('viewBox', [x, y, w, h].join(' '));
+      picture.setAttribute('width', w);
+      picture.setAttribute('height', h);
+      while (group.firstChild) picture.appendChild(group.firstChild);
+      var source = new XMLSerializer().serializeToString(picture);
+      el('image', {x: x, y: y, width: w, height: h,
+        href: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(source)}, group);
+    });
+    // Восемь флагов на всю арену: по четыре каждого цвета.
+    var flagGuide = el('path', {d: contour(65), fill: 'none', stroke: 'none'}, crowd);
+    var flagLength = flagGuide.getTotalLength();
+    for (var f = 0; f < 8; f++) {
+      var flagPoint = flagGuide.getPointAtLength(flagLength * (f + 0.35) / 8);
+      if (flagPoint.x > 455 && flagPoint.x < 745 && flagPoint.y < 0) flagPoint = flagGuide.getPointAtLength(flagLength * (f + 0.85) / 8);
+      var flagFan = el('g', {transform: 'translate(' + flagPoint.x + ' ' + flagPoint.y + ')',
+        style: '--duration:' + (2.1 + f % 3 * 0.4) + 's;--delay:-' + (f * 0.37) + 's'}, crowd);
+      var flag = el('g', {class: 'fan-flag'}, flagFan);
+      el('path', {d: 'M0,2 V-25', stroke: '#dae3ee', 'stroke-width': 1.5, 'stroke-linecap': 'round'}, flag);
+      el('path', {class: 'flag-cloth', d: 'M0,-25 Q6,-29 12,-25 T24,-25 V-10 Q18,-14 12,-10 T0,-10 Z',
+        fill: f % 2 ? '#2389ee' : '#ed354a', stroke: f % 2 ? '#9cd7ff' : '#ffacb5', 'stroke-width': 0.7}, flag);
+    }
+    // Рекламные панели идут по тому же контуру и поворачиваются вместе с бортом.
+    var ads = document.getElementById('boardAds');
+    var guide = el('path', {d: contour(8), fill: 'none', stroke: 'none'}, ads);
+    var total = guide.getTotalLength();
+    var labels = ['GAME', 'HOCKEY', 'CHAMPIONSHIP', '● LIVE', 'PLAY OFF', '★ FINAL ★'];
+    var panels = 44, step = total / panels;
+    for (var n = 0; n < panels; n++) {
+      var start = n * step + 1, end = (n + 1) * step - 1;
+      var d = '';
+      for (var t = 0; t <= 10; t++) {
+        var point = guide.getPointAtLength(start + (end - start) * t / 10);
+        d += (t ? ' L' : 'M') + point.x + ',' + point.y;
+      }
+      el('path', {d: d, fill: 'none', stroke: n % 2 ? '#157bb8' : '#d93948', 'stroke-width': 10}, ads);
+      var center = guide.getPointAtLength((start + end) / 2);
+      var next = guide.getPointAtLength((start + end) / 2 + 1);
+      var angle = Math.atan2(next.y - center.y, next.x - center.x) * 180 / Math.PI;
+      if (angle > 90 || angle < -90) angle += 180;
+      var text = el('text', {transform: 'translate(' + center.x + ' ' + center.y + ') rotate(' + angle + ')',
+        y: 2.5, 'text-anchor': 'middle', fill: '#fff', 'font-size': 7,
+        'font-family': 'Arial, sans-serif', 'font-weight': 'bold'}, ads);
+      text.textContent = labels[n % labels.length];
+    }
+  })();
+
+  var scores = {blue: 0, red: 0};
+  var goalCelebrationTimer = null;
+  function stopGoalCelebration() {
+    clearTimeout(goalCelebrationTimer);
+    goalCelebrationTimer = null;
+    document.getElementById('standsLayer').classList.remove('goal-celebration');
+  }
+  function celebrateGoal() {
+    clearTimeout(goalCelebrationTimer);
+    document.getElementById('standsLayer').classList.add('goal-celebration');
+    goalCelebrationTimer = setTimeout(stopGoalCelebration, 2000);
+  }
+  function changeScore(team, delta) {
+    scores[team] = Math.max(0, Math.min(99, scores[team] + delta));
+    renderScore();
+    if (delta > 0) {
+      celebrateGoal();
+      window.HockeyEffects?.goal(team);
+    }
+  }
+  function resetScore() {
+    stopGoalCelebration();
+    window.HockeyEffects?.clear();
+    scores.blue = scores.red = 0;
+    renderScore();
+  }
+  function renderScore() {
+    document.getElementById('blueScore').textContent = scores.blue;
+    document.getElementById('redScore').textContent = scores.red;
+    document.getElementById('scoreStatus').textContent = 'Вымпел ' + scores.blue + ', Метеор ' + scores.red;
+  }
+
+  var players = document.querySelectorAll('.player');
+  var draggedPlayer = null;
+  var offsetX = 0, offsetY = 0;
+  var svg = document.getElementById('rink');
+
+  for (var i = 0; i < players.length; i++) {
+    players[i].addEventListener('mousedown', startDrag);
+    players[i].addEventListener('touchstart', startDrag, {passive: false});
+  }
+
+  function startDrag(e) {
+    e.preventDefault();
+    draggedPlayer = e.currentTarget;
+    var pt = getMousePos(e);
+    var transform = draggedPlayer.getAttribute('transform');
+    var match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+    if (match) {
+      var tx = parseFloat(match[1]);
+      var ty = parseFloat(match[2]);
+      offsetX = pt.x - tx;
+      offsetY = pt.y - ty;
+    }
+  }
+
+  function getMousePos(e) {
+    var pt = svg.createSVGPoint();
+    var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    pt.x = clientX;
+    pt.y = clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+
+  document.addEventListener('mousemove', drag);
+  document.addEventListener('touchmove', drag, {passive: false});
+  document.addEventListener('mouseup', endDrag);
+  document.addEventListener('touchend', endDrag);
+  document.addEventListener('touchcancel', endDrag);
+
+  function drag(e) {
+    if (!draggedPlayer) return;
+    e.preventDefault();
+    var pt = getMousePos(e);
+    var nx = pt.x - offsetX;
+    var ny = pt.y - offsetY;
+    draggedPlayer.setAttribute('transform', 'translate(' + nx + ', ' + ny + ')');
+  }
+
+  function endDrag() {
+    draggedPlayer = null;
+  }
+</script>
+<script src="hockey-effects.js"></script>
+<script src="hockey-ai.js"></script>
+
+</body>
+</html>
