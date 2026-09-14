@@ -211,6 +211,9 @@
 <div class="controls">
   <button id="resetBtn">🔄 СБРОС СЧЁТА</button>
   <button id="toggleTracksBtn" type="button" aria-pressed="true">⛸ СЛЕДЫ: ВКЛ</button>
+  <button id="toggleConfettiBtn" type="button" aria-pressed="true">🎊 КОНФЕТТИ: ВКЛ</button>
+  <button id="toggleSpotlightsBtn" type="button" aria-pressed="true">🔦 ПРОЖЕКТОРЫ: ВКЛ</button>
+  <button id="toggleCrowdBtn" type="button" aria-pressed="true">👥 ТРИБУНЫ: ДВИЖЕНИЕ</button>
   
   <div class="slider-container">
     <span class="slider-label">🎯 СЛОЖНОСТЬ</span>
@@ -270,6 +273,9 @@ let challengeStartedAt = 0, challengeElapsed = 0, challengeRunning = false;
 let unbreakableAchievementUnlocked = false;
 let paused = false;
 let iceEffectsEnabled = true;
+let confettiEnabled = true;
+let spotlightsEnabled = true;
+let crowdAnimationEnabled = true;
 let goalFlash = 0;
 let goalScorer = 0;
 let crowdJumpTime = 0;
@@ -324,6 +330,10 @@ const SHIRT_COLORS = [
 const SKIN_COLORS = ['#ffdbac', '#f1c27d', '#e0ac69', '#c68642', '#8d5524', '#ffcd94'];
 
 const spectators = [];
+const frozenSpectatorsLayer = document.createElement('canvas');
+frozenSpectatorsLayer.width = CANVAS_W;
+frozenSpectatorsLayer.height = CANVAS_H;
+const frozenSpectatorsCtx = frozenSpectatorsLayer.getContext('2d');
 const skateTracks = [];
 const scratchLayer = document.createElement('canvas');
 scratchLayer.width = FIELD_W;
@@ -537,6 +547,32 @@ function createSpectators() {
 }
 
 createSpectators();
+
+function buildFrozenSpectatorsLayer() {
+  frozenSpectatorsCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+  for (const spectator of spectators) {
+    const size = spectator.size;
+    frozenSpectatorsCtx.fillStyle = spectator.shirt;
+    frozenSpectatorsCtx.fillRect(
+      spectator.x - 3 * size,
+      spectator.baseY - 2 * size,
+      6 * size,
+      6 * size
+    );
+    frozenSpectatorsCtx.fillStyle = spectator.skin;
+    frozenSpectatorsCtx.beginPath();
+    frozenSpectatorsCtx.arc(
+      spectator.x,
+      spectator.baseY - 4 * size,
+      2.5 * size,
+      0,
+      Math.PI * 2
+    );
+    frozenSpectatorsCtx.fill();
+  }
+}
+
+buildFrozenSpectatorsLayer();
 
 function getStickTip(p) {
   return { x: p.x + Math.cos(p.angle) * STICK_LEN, y: p.y + Math.sin(p.angle) * STICK_LEN };
@@ -1711,6 +1747,25 @@ document.getElementById('toggleTracksBtn').addEventListener('click', (event) => 
   }
 });
 
+document.getElementById('toggleConfettiBtn').addEventListener('click', (event) => {
+  confettiEnabled = !confettiEnabled;
+  event.currentTarget.textContent = confettiEnabled ? '🎊 КОНФЕТТИ: ВКЛ' : '🎊 КОНФЕТТИ: ВЫКЛ';
+  event.currentTarget.setAttribute('aria-pressed', String(confettiEnabled));
+  clearConfetti();
+});
+
+document.getElementById('toggleSpotlightsBtn').addEventListener('click', (event) => {
+  spotlightsEnabled = !spotlightsEnabled;
+  event.currentTarget.textContent = spotlightsEnabled ? '🔦 ПРОЖЕКТОРЫ: ВКЛ' : '🔦 ПРОЖЕКТОРЫ: ВЫКЛ';
+  event.currentTarget.setAttribute('aria-pressed', String(spotlightsEnabled));
+});
+
+document.getElementById('toggleCrowdBtn').addEventListener('click', (event) => {
+  crowdAnimationEnabled = !crowdAnimationEnabled;
+  event.currentTarget.textContent = crowdAnimationEnabled ? '👥 ТРИБУНЫ: ДВИЖЕНИЕ' : '👥 ТРИБУНЫ: ЗАМОРОЖЕНЫ';
+  event.currentTarget.setAttribute('aria-pressed', String(crowdAnimationEnabled));
+});
+
 let frameCount = 0;
 
 function clearIceEffects() {
@@ -1871,6 +1926,7 @@ function getRandomConfettiDelay() {
 }
 
 function spawnConfettiBurst(forcedSide = null, forcedCount = null, sizeScale = 1) {
+  if (!confettiEnabled) return;
   const side = forcedSide ?? Math.floor(Math.random() * 4);
   const count = forcedCount ?? (34 + Math.floor(Math.random() * 19));
   let originX;
@@ -1914,6 +1970,7 @@ function spawnConfettiBurst(forcedSide = null, forcedCount = null, sizeScale = 1
 }
 
 function startGoalConfettiCelebration() {
+  if (!confettiEnabled) return;
   goalConfettiActive = true;
   lastGoalConfettiSide = -1;
   goalConfettiBurstsRemaining = 10;
@@ -1927,6 +1984,10 @@ function stopGoalConfettiCelebration() {
 }
 
 function updateConfetti(now) {
+  if (!confettiEnabled) {
+    lastConfettiUpdate = now;
+    return;
+  }
   const elapsed = Math.min(50, now - lastConfettiUpdate);
   const frameScale = elapsed / (1000 / 60);
   lastConfettiUpdate = now;
@@ -1969,6 +2030,7 @@ function updateConfetti(now) {
 }
 
 function drawConfetti() {
+  if (!confettiEnabled) return;
   ctx.save();
   for (const particle of confettiParticles) {
     const lived = particle.maxLife - particle.life;
@@ -2584,6 +2646,7 @@ function drawStands() {
 }
 
 function drawArenaSpotlights() {
+  if (!spotlightsEnabled) return;
   const cycleDuration = 10000;
   const activeDuration = 4000;
   const cycleTime = performance.now() % cycleDuration;
@@ -2776,7 +2839,11 @@ function gameLoop() {
   ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
   
   drawStands();
-  drawSpectators();
+  if (crowdAnimationEnabled) {
+    drawSpectators();
+  } else {
+    ctx.drawImage(frozenSpectatorsLayer, 0, 0);
+  }
   drawArenaSpotlights();
   drawBanners();
   drawScoreboardOnCanvas();
