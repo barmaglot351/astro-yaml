@@ -311,13 +311,13 @@
       fill: var(--track-color);
       stroke: #fff;
       stroke-width: 2;
-      transform: scale(1.25);
+      transform: scale(var(--player-scale, 1.25));
     }
 
     #tracksLayer .track-number {
       fill: #fff;
       font-family: "Arial Black", Arial, sans-serif;
-      font-size: 14px;
+      font-size: var(--player-font-size, 17.5px);
       font-weight: 900;
       text-anchor: middle;
       dominant-baseline: central;
@@ -377,6 +377,11 @@
       <span>Масштаб</span>
       <input id="scale" type="range" min="25" max="200" step="5" value="75">
       <output id="scaleValue" class="scale-value" for="scale">75%</output>
+    </label>
+    <label class="scale-control" for="playerScale">
+      <span>Игроки</span>
+      <input id="playerScale" type="range" min="75" max="200" step="5" value="125">
+      <output id="playerScaleValue" class="scale-value" for="playerScale">125%</output>
     </label>
   </div>
 
@@ -766,6 +771,20 @@
         player.addEventListener("pointerup", stopDragging);
         player.addEventListener("pointercancel", stopDragging);
       });
+
+      var tracksLayer = document.getElementById("tracksLayer");
+      var playerScale = document.getElementById("playerScale");
+      var playerScaleValue = document.getElementById("playerScaleValue");
+
+      function updatePlayerScale() {
+        var percent = Number(playerScale.value);
+        tracksLayer.style.setProperty("--player-scale", percent / 100);
+        tracksLayer.style.setProperty("--player-font-size", 14 * percent / 100 + "px");
+        playerScaleValue.value = percent + "%";
+      }
+
+      playerScale.addEventListener("input", updatePlayerScale);
+      updatePlayerScale();
 
       var board = document.getElementById("board");
       var scale = document.getElementById("scale");
