@@ -316,6 +316,28 @@
       font-weight: 900;
       text-anchor: middle;
       dominant-baseline: central;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    #tracksLayer .track-groove,
+    #tracksLayer .player-track {
+      pointer-events: none;
+    }
+
+    #tracksLayer .track-player {
+      cursor: grab;
+      pointer-events: all;
+      touch-action: none;
+    }
+
+    #tracksLayer .track-player.dragging {
+      cursor: grabbing;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .55));
+    }
+
+    #tracksLayer .track-player:hover .track-badge {
+      stroke-width: 3;
     }
   </style>
 </head>
@@ -557,63 +579,63 @@
       </g>
 
       <!-- Механические направляющие игроков в экранных координатах вертикального поля. -->
-      <g id="tracksLayer" class="layer" clip-path="url(#portraitIceClip)" pointer-events="none" aria-label="Пронумерованные линии движения игроков">
+      <g id="tracksLayer" class="layer" clip-path="url(#portraitIceClip)" aria-label="Пронумерованные линии движения игроков">
         <!-- Красная команда: №1 вратарь, №2–3 защита, №4–6 нападение. -->
         <g class="red-tracks" aria-label="Линии красной команды">
           <g aria-label="Красный вратарь, линия 1">
-            <path class="track-groove" d="M315,150 H490"/><path class="player-track" d="M315,150 H490"/>
+            <path class="track-groove" d="M350,175 H455"/><path class="player-track" d="M350,175 H455"/>
           </g>
           <g aria-label="Красный защитник, линия 2">
-            <path class="track-groove" d="M270,178 V520 Q270,550 300,550 H318"/><path class="player-track" d="M270,178 V520 Q270,550 300,550 H318"/>
+            <path class="track-groove" d="M270,178 V580"/><path class="player-track" d="M270,178 V580"/>
           </g>
           <g aria-label="Красный защитник, линия 3">
-            <path class="track-groove" d="M535,178 V520 Q535,550 505,550 H487"/><path class="player-track" d="M535,178 V520 Q535,550 505,550 H487"/>
+            <path class="track-groove" d="M535,178 V580"/><path class="player-track" d="M535,178 V580"/>
           </g>
           <g aria-label="Красный нападающий, линия 4">
-            <path class="track-groove" d="M182,620 H165 Q145,620 145,640 V985 Q145,1020 180,1020 H198"/><path class="player-track" d="M182,620 H165 Q145,620 145,640 V985 Q145,1020 180,1020 H198"/>
+            <path class="track-groove" d="M145,620 V1020"/><path class="player-track" d="M145,620 V1020"/>
           </g>
           <g aria-label="Красный нападающий, линия 5">
-            <path class="track-groove" d="M438,620 H422 Q402,620 402,640 V1005"/><path class="player-track" d="M438,620 H422 Q402,620 402,640 V1005"/>
+            <path class="track-groove" d="M402,620 V980"/><path class="player-track" d="M402,620 V980"/>
           </g>
           <g aria-label="Красный нападающий, линия 6">
-            <path class="track-groove" d="M623,620 H640 Q660,620 660,640 V985 Q660,1020 625,1020 H607"/><path class="player-track" d="M623,620 H640 Q660,620 660,640 V985 Q660,1020 625,1020 H607"/>
+            <path class="track-groove" d="M660,620 V1020"/><path class="player-track" d="M660,620 V1020"/>
           </g>
 
-          <g transform="translate(325 150)"><circle class="track-badge" r="14"/><text class="track-number" y="1">1</text></g>
-          <g transform="translate(270 370)"><circle class="track-badge" r="14"/><text class="track-number" y="1">2</text></g>
-          <g transform="translate(535 410)"><circle class="track-badge" r="14"/><text class="track-number" y="1">3</text></g>
-          <g transform="translate(145 810)"><circle class="track-badge" r="14"/><text class="track-number" y="1">4</text></g>
-          <g transform="translate(402 850)"><circle class="track-badge" r="14"/><text class="track-number" y="1">5</text></g>
-          <g transform="translate(660 810)"><circle class="track-badge" r="14"/><text class="track-number" y="1">6</text></g>
+          <g class="track-player" data-axis="x" data-fixed="175" data-min="366" data-max="439" transform="translate(375 175)" aria-label="Красный вратарь 1"><circle class="track-badge" r="16"/><text class="track-number" y="1">1</text></g>
+          <g class="track-player" data-axis="y" data-fixed="270" data-min="178" data-max="580" transform="translate(270 370)" aria-label="Красный защитник 2"><circle class="track-badge" r="16"/><text class="track-number" y="1">2</text></g>
+          <g class="track-player" data-axis="y" data-fixed="535" data-min="178" data-max="580" transform="translate(535 410)" aria-label="Красный защитник 3"><circle class="track-badge" r="16"/><text class="track-number" y="1">3</text></g>
+          <g class="track-player" data-axis="y" data-fixed="145" data-min="620" data-max="1020" transform="translate(145 810)" aria-label="Красный нападающий 4"><circle class="track-badge" r="16"/><text class="track-number" y="1">4</text></g>
+          <g class="track-player" data-axis="y" data-fixed="402" data-min="620" data-max="980" transform="translate(402 850)" aria-label="Красный нападающий 5"><circle class="track-badge" r="16"/><text class="track-number" y="1">5</text></g>
+          <g class="track-player" data-axis="y" data-fixed="660" data-min="620" data-max="1020" transform="translate(660 810)" aria-label="Красный нападающий 6"><circle class="track-badge" r="16"/><text class="track-number" y="1">6</text></g>
         </g>
 
         <!-- Синяя команда зеркальна красной. -->
         <g class="blue-tracks" aria-label="Линии синей команды">
           <g aria-label="Синий вратарь, линия 1">
-            <path class="track-groove" d="M315,1050 H490"/><path class="player-track" d="M315,1050 H490"/>
+            <path class="track-groove" d="M350,1025 H455"/><path class="player-track" d="M350,1025 H455"/>
           </g>
           <g aria-label="Синий защитник, линия 2">
-            <path class="track-groove" d="M270,1022 V680 Q270,650 300,650 H318"/><path class="player-track" d="M270,1022 V680 Q270,650 300,650 H318"/>
+            <path class="track-groove" d="M270,1022 V620"/><path class="player-track" d="M270,1022 V620"/>
           </g>
           <g aria-label="Синий защитник, линия 3">
-            <path class="track-groove" d="M535,1022 V680 Q535,650 505,650 H487"/><path class="player-track" d="M535,1022 V680 Q535,650 505,650 H487"/>
+            <path class="track-groove" d="M535,1022 V620"/><path class="player-track" d="M535,1022 V620"/>
           </g>
           <g aria-label="Синий нападающий, линия 4">
-            <path class="track-groove" d="M182,580 H165 Q145,580 145,560 V215 Q145,180 180,180 H198"/><path class="player-track" d="M182,580 H165 Q145,580 145,560 V215 Q145,180 180,180 H198"/>
+            <path class="track-groove" d="M145,580 V180"/><path class="player-track" d="M145,580 V180"/>
           </g>
           <g aria-label="Синий нападающий, линия 5">
-            <path class="track-groove" d="M438,580 H422 Q402,580 402,560 V195"/><path class="player-track" d="M438,580 H422 Q402,580 402,560 V195"/>
+            <path class="track-groove" d="M402,580 V220"/><path class="player-track" d="M402,580 V220"/>
           </g>
           <g aria-label="Синий нападающий, линия 6">
-            <path class="track-groove" d="M623,580 H640 Q660,580 660,560 V215 Q660,180 625,180 H607"/><path class="player-track" d="M623,580 H640 Q660,580 660,560 V215 Q660,180 625,180 H607"/>
+            <path class="track-groove" d="M660,580 V180"/><path class="player-track" d="M660,580 V180"/>
           </g>
 
-          <g transform="translate(480 1050)"><circle class="track-badge" r="14"/><text class="track-number" y="1">1</text></g>
-          <g transform="translate(270 830)"><circle class="track-badge" r="14"/><text class="track-number" y="1">2</text></g>
-          <g transform="translate(535 790)"><circle class="track-badge" r="14"/><text class="track-number" y="1">3</text></g>
-          <g transform="translate(145 390)"><circle class="track-badge" r="14"/><text class="track-number" y="1">4</text></g>
-          <g transform="translate(402 350)"><circle class="track-badge" r="14"/><text class="track-number" y="1">5</text></g>
-          <g transform="translate(660 390)"><circle class="track-badge" r="14"/><text class="track-number" y="1">6</text></g>
+          <g class="track-player" data-axis="x" data-fixed="1025" data-min="366" data-max="439" transform="translate(430 1025)" aria-label="Синий вратарь 1"><circle class="track-badge" r="16"/><text class="track-number" y="1">1</text></g>
+          <g class="track-player" data-axis="y" data-fixed="270" data-min="620" data-max="1022" transform="translate(270 830)" aria-label="Синий защитник 2"><circle class="track-badge" r="16"/><text class="track-number" y="1">2</text></g>
+          <g class="track-player" data-axis="y" data-fixed="535" data-min="620" data-max="1022" transform="translate(535 790)" aria-label="Синий защитник 3"><circle class="track-badge" r="16"/><text class="track-number" y="1">3</text></g>
+          <g class="track-player" data-axis="y" data-fixed="145" data-min="180" data-max="580" transform="translate(145 390)" aria-label="Синий нападающий 4"><circle class="track-badge" r="16"/><text class="track-number" y="1">4</text></g>
+          <g class="track-player" data-axis="y" data-fixed="402" data-min="220" data-max="580" transform="translate(402 350)" aria-label="Синий нападающий 5"><circle class="track-badge" r="16"/><text class="track-number" y="1">5</text></g>
+          <g class="track-player" data-axis="y" data-fixed="660" data-min="180" data-max="580" transform="translate(660 390)" aria-label="Синий нападающий 6"><circle class="track-badge" r="16"/><text class="track-number" y="1">6</text></g>
         </g>
       </g>
       </svg>
@@ -688,6 +710,57 @@
 
       goalSkinSelect.addEventListener("change", updateGoalSkin);
       updateGoalSkin();
+
+      var rink = document.getElementById("rink");
+      var draggedTrackPlayer = null;
+      var draggedPointerId = null;
+
+      function pointerPosition(event) {
+        var point = rink.createSVGPoint();
+        point.x = event.clientX;
+        point.y = event.clientY;
+        return point.matrixTransform(rink.getScreenCTM().inverse());
+      }
+
+      function moveTrackPlayer(player, point) {
+        var axis = player.dataset.axis;
+        var fixed = Number(player.dataset.fixed);
+        var minimum = Number(player.dataset.min);
+        var maximum = Number(player.dataset.max);
+        var movingCoordinate = axis === "x" ? point.x : point.y;
+        var constrained = Math.max(minimum, Math.min(maximum, movingCoordinate));
+        var x = axis === "x" ? constrained : fixed;
+        var y = axis === "y" ? constrained : fixed;
+        player.setAttribute("transform", "translate(" + x + " " + y + ")");
+      }
+
+      document.querySelectorAll(".track-player").forEach(function (player) {
+        player.addEventListener("pointerdown", function (event) {
+          event.preventDefault();
+          draggedTrackPlayer = player;
+          draggedPointerId = event.pointerId;
+          player.classList.add("dragging");
+          player.setPointerCapture(event.pointerId);
+          moveTrackPlayer(player, pointerPosition(event));
+        });
+
+        player.addEventListener("pointermove", function (event) {
+          if (draggedTrackPlayer !== player || draggedPointerId !== event.pointerId) return;
+          event.preventDefault();
+          moveTrackPlayer(player, pointerPosition(event));
+        });
+
+        function stopDragging(event) {
+          if (draggedTrackPlayer !== player || draggedPointerId !== event.pointerId) return;
+          player.classList.remove("dragging");
+          if (player.hasPointerCapture(event.pointerId)) player.releasePointerCapture(event.pointerId);
+          draggedTrackPlayer = null;
+          draggedPointerId = null;
+        }
+
+        player.addEventListener("pointerup", stopDragging);
+        player.addEventListener("pointercancel", stopDragging);
+      });
 
       var board = document.getElementById("board");
       var scale = document.getElementById("scale");
