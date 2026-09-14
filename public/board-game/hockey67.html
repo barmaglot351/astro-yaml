@@ -91,7 +91,7 @@
     }
 
     .board {
-      width: min(100%, 700px);
+      width: min(100%, 805px);
       margin: 0 auto;
       line-height: 0;
     }
@@ -122,7 +122,7 @@
 
   <main class="viewport">
     <div class="board" id="board">
-      <svg id="rink" viewBox="0 0 700 1200" role="img" aria-label="Вертикальное хоккейное поле" xmlns="http://www.w3.org/2000/svg">
+      <svg id="rink" viewBox="0 0 805 1200" role="img" aria-label="Вертикальное хоккейное поле" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <pattern id="goalNet" width="5" height="5" patternUnits="userSpaceOnUse">
           <rect width="5" height="5" fill="#eff5fa" fill-opacity=".75"/>
@@ -137,8 +137,8 @@
         </clipPath>
       </defs>
 
-      <!-- Исходная горизонтальная геометрия повёрнута на 90 градусов. -->
-      <g transform="translate(700 0) rotate(90)">
+      <!-- Геометрия повёрнута на 90 градусов и расширена по горизонтали на 15%. -->
+      <g transform="matrix(0 1 -1.15 0 805 0)">
         <g id="fieldLayer" class="layer" clip-path="url(#iceClip)" aria-label="Лёд и разметка площадки">
           <rect x="30" y="30" width="1140" height="640" rx="180" fill="#fff"/>
           <g id="rinkMarkings" fill="none" stroke-width="3.5">
@@ -147,40 +147,41 @@
             <path d="M440,30 V670 M760,30 V670" stroke="#3586aa" stroke-width="5"/>
             <path d="M100,30 V670 M1100,30 V670" stroke="#d51f36" stroke-width="4"/>
 
-            <circle cx="600" cy="350" r="87" stroke="#3586aa"/>
-            <circle cx="600" cy="350" r="7" fill="#3586aa" stroke="#fff" stroke-width="2"/>
+            <!-- Эллипсы компенсируют горизонтальное расширение поля и выглядят кругами. -->
+            <ellipse cx="600" cy="350" rx="87" ry="75.65" stroke="#3586aa"/>
+            <ellipse cx="600" cy="350" rx="7" ry="6.09" fill="#3586aa" stroke="#fff" stroke-width="2"/>
 
             <path d="M100,300 A50,50 0 0 1 100,400 Z"
                   fill="#56a9c5" fill-opacity="0.72" stroke="#d51f36" stroke-width="3"/>
             <path d="M1100,300 A50,50 0 0 0 1100,400 Z"
                   fill="#56a9c5" fill-opacity="0.72" stroke="#d51f36" stroke-width="3"/>
 
-            <g transform="translate(220 190)" stroke="#d51f36">
+            <g transform="translate(220 190) scale(1 .869565)" stroke="#d51f36">
               <circle r="87"/>
               <circle r="7" fill="#d51f36" stroke="none"/>
               <path d="M-14,-86 V-97 M14,-86 V-97 M-14,86 V97 M14,86 V97 M-14,-20 V20 M14,-20 V20 M-14,-4 H-38 M-14,4 H-38 M14,-4 H38 M14,4 H38"/>
             </g>
-            <g transform="translate(220 510)" stroke="#d51f36">
+            <g transform="translate(220 510) scale(1 .869565)" stroke="#d51f36">
               <circle r="87"/>
               <circle r="7" fill="#d51f36" stroke="none"/>
               <path d="M-14,-86 V-97 M14,-86 V-97 M-14,86 V97 M14,86 V97 M-14,-20 V20 M14,-20 V20 M-14,-4 H-38 M-14,4 H-38 M14,-4 H38 M14,4 H38"/>
             </g>
-            <g transform="translate(980 190)" stroke="#d51f36">
+            <g transform="translate(980 190) scale(1 .869565)" stroke="#d51f36">
               <circle r="87"/>
               <circle r="7" fill="#d51f36" stroke="none"/>
               <path d="M-14,-86 V-97 M14,-86 V-97 M-14,86 V97 M14,86 V97 M-14,-20 V20 M14,-20 V20 M-14,-4 H-38 M-14,4 H-38 M14,-4 H38 M14,4 H38"/>
             </g>
-            <g transform="translate(980 510)" stroke="#d51f36">
+            <g transform="translate(980 510) scale(1 .869565)" stroke="#d51f36">
               <circle r="87"/>
               <circle r="7" fill="#d51f36" stroke="none"/>
               <path d="M-14,-86 V-97 M14,-86 V-97 M-14,86 V97 M14,86 V97 M-14,-20 V20 M14,-20 V20 M-14,-4 H-38 M-14,4 H-38 M14,-4 H38 M14,4 H38"/>
             </g>
 
             <g fill="#d51f36" stroke="none">
-              <circle cx="472" cy="204" r="7"/>
-              <circle cx="728" cy="204" r="7"/>
-              <circle cx="472" cy="496" r="7"/>
-              <circle cx="728" cy="496" r="7"/>
+              <ellipse cx="472" cy="204" rx="7" ry="6.09"/>
+              <ellipse cx="728" cy="204" rx="7" ry="6.09"/>
+              <ellipse cx="472" cy="496" rx="7" ry="6.09"/>
+              <ellipse cx="728" cy="496" rx="7" ry="6.09"/>
             </g>
             <path d="M517,670 A83,83 0 0 1 683,670" stroke="#d51f36"/>
           </g>
@@ -257,7 +258,7 @@
       function updateScale() {
         var percent = Number(scale.value);
         var availableWidth = Math.max(1, window.innerWidth - 32);
-        var fittedWidth = Math.min(700, availableWidth);
+        var fittedWidth = Math.min(805, availableWidth);
         board.style.width = fittedWidth * percent / 100 + "px";
         scaleValue.value = percent + "%";
       }
