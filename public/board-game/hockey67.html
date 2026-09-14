@@ -128,10 +128,9 @@
           <rect width="5" height="5" fill="#eff5fa" fill-opacity=".75"/>
           <path d="M5,0 H0 V5" fill="none" stroke="#7e91a3" stroke-width=".65"/>
         </pattern>
-        <pattern id="mathGrid" x="30" y="30" width="76" height="80" patternUnits="userSpaceOnUse">
-          <path d="M19,0 V80 M38,0 V80 M57,0 V80 M0,20 H76 M0,40 H76 M0,60 H76"
-                fill="none" stroke="#7bc9eb" stroke-width="0.8" opacity="0.28"/>
-          <path d="M76,0 H0 V80" fill="none" stroke="#55b8e2" stroke-width="1.5" opacity="0.5"/>
+        <!-- После поворота площадки ячейка имеет размер 64 × 60 px. -->
+        <pattern id="mathGrid" x="30" y="30" width="60" height="64" patternUnits="userSpaceOnUse">
+          <path d="M60,0 H0 V64" fill="none" stroke="#3ca8d4" stroke-width="1.25" opacity="0.62"/>
         </pattern>
         <clipPath id="iceClip">
           <rect x="30" y="30" width="1140" height="640" rx="180"/>
@@ -187,7 +186,7 @@
           </g>
         </g>
 
-        <g id="gridLayer" class="layer" hidden clip-path="url(#iceClip)" pointer-events="none" aria-label="Координатная сетка">
+        <g id="gridLayer" class="layer" hidden clip-path="url(#iceClip)" pointer-events="none" aria-label="Координатная сетка: буквы по оси X, цифры по оси Y">
           <rect x="30" y="30" width="1140" height="640" fill="url(#mathGrid)"/>
           <g id="gridLabels"></g>
         </g>
@@ -216,31 +215,30 @@
         var label = document.createElementNS(namespace, "text");
         label.setAttribute("x", x);
         label.setAttribute("y", y);
+        label.setAttribute("transform", "rotate(-90 " + x + " " + y + ")");
         label.setAttribute("text-anchor", "middle");
         label.setAttribute("dominant-baseline", "middle");
-        label.setAttribute("fill", "#247fa9");
+        label.setAttribute("fill", "#176f98");
         label.setAttribute("stroke", "#fff");
-        label.setAttribute("stroke-width", "3");
+        label.setAttribute("stroke-width", "2.5");
         label.setAttribute("paint-order", "stroke");
-        label.setAttribute("font-size", "14");
+        label.setAttribute("font-size", "11");
+        label.setAttribute("font-family", "Segoe UI, Arial, sans-serif");
         label.setAttribute("font-weight", "700");
-        label.setAttribute("opacity", "0.68");
+        label.setAttribute("opacity", "0.7");
         label.textContent = value;
         labels.appendChild(label);
       }
 
-      for (var column = 0; column < 15; column += 1) {
-        var letter = String.fromCharCode(65 + column);
-        var x = 68 + column * 76;
-        addLabel(letter, x, 112);
-        addLabel(letter, x, 588);
-      }
-
-      for (var row = 0; row < 8; row += 1) {
-        var y = 70 + row * 80;
-        var edgeX = row === 0 || row === 7 ? 110 : 48;
-        addLabel(String(row + 1), edgeX, y);
-        addLabel(String(row + 1), 1200 - edgeX, y);
+      // Экранная ось X идёт слева направо буквами A–J, ось Y — сверху вниз числами 1–19.
+      // Координаты пересчитаны в исходную систему до общего поворота площадки на 90°.
+      for (var row = 0; row < 19; row += 1) {
+        for (var column = 0; column < 10; column += 1) {
+          var letter = String.fromCharCode(65 + column);
+          var originalX = 60 + row * 60;
+          var originalY = 638 - column * 64;
+          addLabel(letter + (row + 1), originalX, originalY);
+        }
       }
 
       document.querySelectorAll("[data-layer]").forEach(function (button) {
