@@ -21,8 +21,8 @@
       min-height: 100vh;
       flex-direction: column;
       align-items: center;
-      gap: 16px;
-      padding: 16px;
+      gap: 10px;
+      padding: 10px;
       color: #fff;
       font-family: "Segoe UI", Arial, sans-serif;
     }
@@ -31,18 +31,19 @@
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 10px;
+      gap: 6px;
     }
 
     .controls button {
-      min-width: 105px;
-      padding: 9px 16px;
+      min-width: 0;
+      padding: 6px 10px;
       border: 1px solid #777;
       border-radius: 999px;
       background: #171717;
       color: #aaa;
       cursor: pointer;
       font: inherit;
+      font-size: 13px;
     }
 
     .controls button:hover {
@@ -63,17 +64,18 @@
     .scale-control {
       display: flex;
       align-items: center;
-      gap: 10px;
-      min-width: min(100%, 290px);
-      padding: 7px 14px;
+      gap: 7px;
+      min-width: min(100%, 225px);
+      padding: 5px 9px;
       border: 1px solid #777;
       border-radius: 999px;
       background: #171717;
       color: #fff;
+      font-size: 13px;
     }
 
     .scale-control input {
-      width: 150px;
+      width: 105px;
       accent-color: #69c9f0;
       cursor: pointer;
     }
@@ -81,17 +83,18 @@
     .skin-picker {
       display: flex;
       align-items: center;
-      gap: 9px;
-      padding: 7px 12px;
+      gap: 6px;
+      padding: 5px 8px;
       border: 1px solid #777;
       border-radius: 999px;
       background: #171717;
       color: #fff;
+      font-size: 13px;
     }
 
     .skin-picker select {
-      max-width: 205px;
-      padding: 5px 8px;
+      max-width: 165px;
+      padding: 3px 6px;
       border: 1px solid #555;
       border-radius: 8px;
       background: #050505;
@@ -362,8 +365,8 @@
     <label class="skin-picker" for="goalSkinSelect">
       <span>Вид ворот</span>
       <select id="goalSkinSelect">
-        <option value="classic" selected>Классические</option>
-        <option value="pro-padded">Профессиональные</option>
+        <option value="classic">Классические</option>
+        <option value="pro-padded" selected>Профессиональные</option>
         <option value="modern">Современные</option>
         <option value="minimal">Минималистичные</option>
       </select>
@@ -457,13 +460,13 @@
         <!-- Слой оформления льда, независимый от линий и игровых объектов. -->
         <g id="skinLayer" class="layer" clip-path="url(#iceClip)" aria-label="Скин хоккейного поля">
           <g class="skin-option active" data-skin="scratched-blue">
-            <rect x="30" y="30" width="1140" height="640" rx="180" fill="url(#scratchedIce)"/>
+            <rect x="30" y="30" width="1140" height="640" rx="180" fill="url(#cleanBlueIce)"/>
             <use href="#naturalSkateMarks"/>
-            <!-- Широкий полупрозрачный контур имитирует внутреннюю тень от бортов. -->
+            <!-- Мягкая внутренняя тень сохраняет светлый характер чистого голубого льда. -->
             <rect x="31" y="31" width="1138" height="638" rx="179" fill="none"
-                  stroke="#284873" stroke-width="36" stroke-opacity=".3"/>
-            <rect x="50" y="50" width="1100" height="600" rx="160" fill="none"
-                  stroke="#fff" stroke-width="3" stroke-opacity=".35"/>
+                  stroke="#517da5" stroke-width="22" stroke-opacity=".16"/>
+            <rect x="43" y="43" width="1114" height="614" rx="167" fill="none"
+                  stroke="#fff" stroke-width="2" stroke-opacity=".28"/>
           </g>
           <g class="skin-option" data-skin="clean-blue">
             <rect x="30" y="30" width="1140" height="640" rx="180" fill="url(#cleanBlueIce)"/>
@@ -539,7 +542,7 @@
           </g>
         </g>
 
-        <g id="goalsLayer" class="layer" data-goal-skin="classic" aria-label="Красные и синие ворота с вратарскими зонами">
+        <g id="goalsLayer" class="layer" data-goal-skin="pro-padded" aria-label="Красные и синие ворота с вратарскими зонами">
           <!-- Вратарские зоны являются частью слоя ворот. -->
           <path d="M150,300 A50,50 0 0 1 150,400 Z"
                 fill="#56a9c5" fill-opacity="0.72" stroke="#d51f36" stroke-width="3"/>
@@ -768,7 +771,7 @@
 
       function updateScale() {
         var percent = Number(scale.value);
-        var availableWidth = Math.max(1, window.innerWidth - 32);
+        var availableWidth = Math.max(1, window.innerWidth - 20);
         var fittedWidth = Math.min(805, availableWidth);
         board.style.width = fittedWidth * percent / 100 + "px";
         scaleValue.value = percent + "%";
