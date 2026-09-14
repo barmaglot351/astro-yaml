@@ -281,6 +281,7 @@
 </head>
 <body>
   <div class="controls" aria-label="Управление слоями">
+    <button type="button" data-layer="boardsLayer" aria-pressed="true">Борта</button>
     <button type="button" data-layer="skinLayer" aria-pressed="true">Скин поля</button>
     <button type="button" data-layer="fieldLayer" aria-pressed="true">Поле</button>
     <button type="button" data-layer="gridLayer" aria-pressed="false">Сетка</button>
@@ -416,7 +417,6 @@
 
         <g id="fieldLayer" class="layer" clip-path="url(#iceClip)" aria-label="Разметка площадки">
           <g id="rinkMarkings" fill="none" stroke-width="3.5">
-            <rect x="32" y="32" width="1136" height="636" rx="178" stroke="#59636d" stroke-width="5"/>
             <path d="M600,30 V670" stroke="#d51f36" stroke-width="4"/>
             <path d="M440,30 V670 M760,30 V670" stroke="#3586aa" stroke-width="5"/>
             <path d="M150,30 V670 M1050,30 V670" stroke="#d51f36" stroke-width="4"/>
@@ -498,6 +498,17 @@
 
           <text class="goal-number red-goal-number" x="175" y="350" transform="rotate(-90 175 350)">1</text>
           <text class="goal-number blue-goal-number" x="1025" y="350" transform="rotate(-90 1025 350)">2</text>
+        </g>
+
+        <!-- Серый борт настольного хоккея поверх кромки всех слоёв. -->
+        <g id="boardsLayer" class="layer" pointer-events="none" aria-label="Серые борта площадки">
+          <!-- Контуры смещены наружу: их внутренняя грань совпадает с краем льда. -->
+          <rect x="18" y="18" width="1164" height="664" rx="192" fill="none"
+                stroke="#343a43" stroke-width="24"/>
+          <rect x="21" y="21" width="1158" height="658" rx="189" fill="none"
+                stroke="#777f8a" stroke-width="18"/>
+          <rect x="28.75" y="28.75" width="1142.5" height="642.5" rx="181.25" fill="none"
+                stroke="#b9c0c8" stroke-width="2.5" stroke-opacity=".85"/>
         </g>
       </g>
       </svg>
