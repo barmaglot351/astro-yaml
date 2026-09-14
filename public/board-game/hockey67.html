@@ -149,6 +149,31 @@
     #circlesLayer.grid-mode .circle-number {
       display: block;
     }
+
+    #goalsLayer .goal-number {
+      display: none;
+      stroke: #fff;
+      stroke-width: 3;
+      paint-order: stroke;
+      font-family: "Arial Black", Arial, sans-serif;
+      font-size: 24px;
+      font-weight: 900;
+      text-anchor: middle;
+      dominant-baseline: central;
+      fill: #1565c0;
+    }
+
+    #goalsLayer .red-goal-number {
+      fill: #1565c0;
+    }
+
+    #goalsLayer .blue-goal-number {
+      fill: #1565c0;
+    }
+
+    #goalsLayer.grid-mode .goal-number {
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -156,7 +181,7 @@
     <button type="button" data-layer="fieldLayer" aria-pressed="true">Поле</button>
     <button type="button" data-layer="gridLayer" aria-pressed="false">Сетка</button>
     <button type="button" data-layer="circlesLayer" aria-pressed="true">Круги</button>
-    <button type="button" data-layer="goalsLayer" aria-pressed="true">Ворота</button>
+    <button type="button" data-layer="goalsLayer" aria-pressed="true">Ворота и зоны</button>
     <label class="scale-control" for="scale">
       <span>Масштаб</span>
       <input id="scale" type="range" min="25" max="200" step="5" value="75">
@@ -191,10 +216,6 @@
             <path d="M440,30 V670 M760,30 V670" stroke="#3586aa" stroke-width="5"/>
             <path d="M100,30 V670 M1100,30 V670" stroke="#d51f36" stroke-width="4"/>
 
-            <path d="M100,300 A50,50 0 0 1 100,400 Z"
-                  fill="#56a9c5" fill-opacity="0.72" stroke="#d51f36" stroke-width="3"/>
-            <path d="M1100,300 A50,50 0 0 0 1100,400 Z"
-                  fill="#56a9c5" fill-opacity="0.72" stroke="#d51f36" stroke-width="3"/>
             <path d="M517,670 A83,83 0 0 1 683,670" stroke="#d51f36"/>
           </g>
         </g>
@@ -247,15 +268,27 @@
           </g>
         </g>
 
-        <g id="goalsLayer" class="layer" aria-label="Ворота">
+        <g id="goalsLayer" class="layer" aria-label="Красные и синие ворота с вратарскими зонами">
+          <!-- Вратарские зоны являются частью слоя ворот. -->
+          <path d="M100,300 A50,50 0 0 1 100,400 Z"
+                fill="#56a9c5" fill-opacity="0.72" stroke="#d51f36" stroke-width="3"/>
+          <path d="M1100,300 A50,50 0 0 0 1100,400 Z"
+                fill="#56a9c5" fill-opacity="0.72" stroke="#1565c0" stroke-width="3"/>
+
+          <!-- Красные ворота № 1. -->
           <g transform="translate(100 350)">
             <path d="M0,-50 H-18 Q-30,-50 -30,-38 V38 Q-30,50 -18,50 H0 Z" fill="url(#goalNet)" pointer-events="none"/>
             <path d="M0,-50 H-18 Q-30,-50 -30,-38 V38 Q-30,50 -18,50 H0" fill="none" stroke="#d32f2f" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
           </g>
+
+          <!-- Синие ворота № 2. -->
           <g transform="translate(1100 350)">
             <path d="M0,-50 H18 Q30,-50 30,-38 V38 Q30,50 18,50 H0 Z" fill="url(#goalNet)" pointer-events="none"/>
             <path d="M0,-50 H18 Q30,-50 30,-38 V38 Q30,50 18,50 H0" fill="none" stroke="#1565c0" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
           </g>
+
+          <text class="goal-number red-goal-number" x="125" y="350" transform="rotate(-90 125 350)">1</text>
+          <text class="goal-number blue-goal-number" x="1075" y="350" transform="rotate(-90 1075 350)">2</text>
         </g>
       </g>
       </svg>
@@ -306,6 +339,7 @@
 
           if (button.dataset.layer === "gridLayer") {
             document.getElementById("circlesLayer").classList.toggle("grid-mode", willBeVisible);
+            document.getElementById("goalsLayer").classList.toggle("grid-mode", willBeVisible);
           }
         });
       });
