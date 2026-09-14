@@ -106,12 +106,56 @@
     .layer[hidden] {
       display: none;
     }
+
+    #circlesLayer .faceoff-circle {
+      stroke: #d51f36;
+    }
+
+    #circlesLayer .center-circle {
+      stroke: #3586aa;
+    }
+
+    #circlesLayer .faceoff-dot {
+      fill: #d51f36;
+    }
+
+    #circlesLayer .center-dot {
+      fill: #3586aa;
+    }
+
+    #circlesLayer .circle-number {
+      display: none;
+      fill: #126fa4;
+      stroke: #fff;
+      stroke-width: 5;
+      paint-order: stroke;
+      font-family: "Arial Black", Arial, sans-serif;
+      font-size: 42px;
+      font-weight: 900;
+      text-anchor: middle;
+      dominant-baseline: central;
+    }
+
+    #circlesLayer.grid-mode .faceoff-circle,
+    #circlesLayer.grid-mode .center-circle {
+      stroke: #126fa4;
+    }
+
+    #circlesLayer.grid-mode .faceoff-dot,
+    #circlesLayer.grid-mode .center-dot {
+      fill: #126fa4;
+    }
+
+    #circlesLayer.grid-mode .circle-number {
+      display: block;
+    }
   </style>
 </head>
 <body>
   <div class="controls" aria-label="Управление слоями">
     <button type="button" data-layer="fieldLayer" aria-pressed="true">Поле</button>
     <button type="button" data-layer="gridLayer" aria-pressed="false">Сетка</button>
+    <button type="button" data-layer="circlesLayer" aria-pressed="true">Круги</button>
     <button type="button" data-layer="goalsLayer" aria-pressed="true">Ворота</button>
     <label class="scale-control" for="scale">
       <span>Масштаб</span>
@@ -147,42 +191,10 @@
             <path d="M440,30 V670 M760,30 V670" stroke="#3586aa" stroke-width="5"/>
             <path d="M100,30 V670 M1100,30 V670" stroke="#d51f36" stroke-width="4"/>
 
-            <!-- Эллипсы компенсируют горизонтальное расширение поля и выглядят кругами. -->
-            <ellipse cx="600" cy="350" rx="87" ry="75.65" stroke="#3586aa"/>
-            <ellipse cx="600" cy="350" rx="7" ry="6.09" fill="#3586aa" stroke="#fff" stroke-width="2"/>
-
             <path d="M100,300 A50,50 0 0 1 100,400 Z"
                   fill="#56a9c5" fill-opacity="0.72" stroke="#d51f36" stroke-width="3"/>
             <path d="M1100,300 A50,50 0 0 0 1100,400 Z"
                   fill="#56a9c5" fill-opacity="0.72" stroke="#d51f36" stroke-width="3"/>
-
-            <g transform="translate(220 190) scale(1 .869565)" stroke="#d51f36">
-              <circle r="87"/>
-              <circle r="7" fill="#d51f36" stroke="none"/>
-              <path d="M-14,-86 V-97 M14,-86 V-97 M-14,86 V97 M14,86 V97 M-14,-20 V20 M14,-20 V20 M-14,-4 H-38 M-14,4 H-38 M14,-4 H38 M14,4 H38"/>
-            </g>
-            <g transform="translate(220 510) scale(1 .869565)" stroke="#d51f36">
-              <circle r="87"/>
-              <circle r="7" fill="#d51f36" stroke="none"/>
-              <path d="M-14,-86 V-97 M14,-86 V-97 M-14,86 V97 M14,86 V97 M-14,-20 V20 M14,-20 V20 M-14,-4 H-38 M-14,4 H-38 M14,-4 H38 M14,4 H38"/>
-            </g>
-            <g transform="translate(980 190) scale(1 .869565)" stroke="#d51f36">
-              <circle r="87"/>
-              <circle r="7" fill="#d51f36" stroke="none"/>
-              <path d="M-14,-86 V-97 M14,-86 V-97 M-14,86 V97 M14,86 V97 M-14,-20 V20 M14,-20 V20 M-14,-4 H-38 M-14,4 H-38 M14,-4 H38 M14,4 H38"/>
-            </g>
-            <g transform="translate(980 510) scale(1 .869565)" stroke="#d51f36">
-              <circle r="87"/>
-              <circle r="7" fill="#d51f36" stroke="none"/>
-              <path d="M-14,-86 V-97 M14,-86 V-97 M-14,86 V97 M14,86 V97 M-14,-20 V20 M14,-20 V20 M-14,-4 H-38 M-14,4 H-38 M14,-4 H38 M14,4 H38"/>
-            </g>
-
-            <g fill="#d51f36" stroke="none">
-              <ellipse cx="472" cy="204" rx="7" ry="6.09"/>
-              <ellipse cx="728" cy="204" rx="7" ry="6.09"/>
-              <ellipse cx="472" cy="496" rx="7" ry="6.09"/>
-              <ellipse cx="728" cy="496" rx="7" ry="6.09"/>
-            </g>
             <path d="M517,670 A83,83 0 0 1 683,670" stroke="#d51f36"/>
           </g>
         </g>
@@ -190,6 +202,49 @@
         <g id="gridLayer" class="layer" hidden clip-path="url(#iceClip)" pointer-events="none" aria-label="Координатная сетка: буквы по оси X, цифры по оси Y">
           <rect x="30" y="30" width="1140" height="640" fill="url(#mathGrid)"/>
           <g id="gridLabels"></g>
+        </g>
+
+        <!-- Все окружности и точки площадки собраны в отдельном слое. -->
+        <g id="circlesLayer" class="layer" clip-path="url(#iceClip)" pointer-events="none" aria-label="Пронумерованные круги площадки">
+          <!-- Центральный круг № 3. Эллипсы компенсируют расширение поля и выглядят кругами. -->
+          <ellipse class="center-circle" cx="600" cy="350" rx="87" ry="75.65" fill="none" stroke-width="3.5"/>
+          <ellipse class="center-dot" cx="600" cy="350" rx="7" ry="6.09" stroke="#fff" stroke-width="2"/>
+
+          <g class="faceoff-circle" transform="translate(220 190) scale(1 .869565)" fill="none" stroke-width="3.5">
+            <circle r="87"/>
+            <circle class="faceoff-dot" r="7" stroke="none"/>
+            <path d="M-14,-86 V-97 M14,-86 V-97 M-14,86 V97 M14,86 V97 M-14,-20 V20 M14,-20 V20 M-14,-4 H-38 M-14,4 H-38 M14,-4 H38 M14,4 H38"/>
+          </g>
+          <g class="faceoff-circle" transform="translate(220 510) scale(1 .869565)" fill="none" stroke-width="3.5">
+            <circle r="87"/>
+            <circle class="faceoff-dot" r="7" stroke="none"/>
+            <path d="M-14,-86 V-97 M14,-86 V-97 M-14,86 V97 M14,86 V97 M-14,-20 V20 M14,-20 V20 M-14,-4 H-38 M-14,4 H-38 M14,-4 H38 M14,4 H38"/>
+          </g>
+          <g class="faceoff-circle" transform="translate(980 190) scale(1 .869565)" fill="none" stroke-width="3.5">
+            <circle r="87"/>
+            <circle class="faceoff-dot" r="7" stroke="none"/>
+            <path d="M-14,-86 V-97 M14,-86 V-97 M-14,86 V97 M14,86 V97 M-14,-20 V20 M14,-20 V20 M-14,-4 H-38 M-14,4 H-38 M14,-4 H38 M14,4 H38"/>
+          </g>
+          <g class="faceoff-circle" transform="translate(980 510) scale(1 .869565)" fill="none" stroke-width="3.5">
+            <circle r="87"/>
+            <circle class="faceoff-dot" r="7" stroke="none"/>
+            <path d="M-14,-86 V-97 M14,-86 V-97 M-14,86 V97 M14,86 V97 M-14,-20 V20 M14,-20 V20 M-14,-4 H-38 M-14,4 H-38 M14,-4 H38 M14,4 H38"/>
+          </g>
+
+          <g stroke="none">
+            <ellipse class="faceoff-dot" cx="472" cy="204" rx="7" ry="6.09"/>
+            <ellipse class="faceoff-dot" cx="728" cy="204" rx="7" ry="6.09"/>
+            <ellipse class="faceoff-dot" cx="472" cy="496" rx="7" ry="6.09"/>
+            <ellipse class="faceoff-dot" cx="728" cy="496" rx="7" ry="6.09"/>
+          </g>
+
+          <g aria-label="Номера кругов">
+            <text class="circle-number" x="220" y="510" transform="rotate(-90 220 510)">1</text>
+            <text class="circle-number" x="220" y="190" transform="rotate(-90 220 190)">2</text>
+            <text class="circle-number" x="600" y="350" transform="rotate(-90 600 350)">3</text>
+            <text class="circle-number" x="980" y="510" transform="rotate(-90 980 510)">4</text>
+            <text class="circle-number" x="980" y="190" transform="rotate(-90 980 190)">5</text>
+          </g>
         </g>
 
         <g id="goalsLayer" class="layer" aria-label="Ворота">
@@ -248,6 +303,10 @@
           var willBeVisible = button.getAttribute("aria-pressed") !== "true";
           layer.toggleAttribute("hidden", !willBeVisible);
           button.setAttribute("aria-pressed", String(willBeVisible));
+
+          if (button.dataset.layer === "gridLayer") {
+            document.getElementById("circlesLayer").classList.toggle("grid-mode", willBeVisible);
+          }
         });
       });
 
