@@ -204,6 +204,79 @@
     #goalsLayer.grid-mode .goal-number {
       display: block;
     }
+
+    #goalsLayer .red-goal {
+      --goal-color: #d32f2f;
+    }
+
+    #goalsLayer .blue-goal {
+      --goal-color: #1565c0;
+    }
+
+    #goalsLayer .goal-net {
+      fill: url(#goalNet);
+    }
+
+    #goalsLayer .goal-frame {
+      fill: none;
+      stroke: var(--goal-color);
+      stroke-width: 5;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+    }
+
+    #goalsLayer .goal-support,
+    #goalsLayer .goal-pad {
+      display: none;
+      fill: none;
+    }
+
+    #goalsLayer[data-goal-skin="pro-padded"] .goal-net {
+      fill: url(#goalNetDense);
+    }
+
+    #goalsLayer[data-goal-skin="pro-padded"] .goal-frame {
+      stroke-width: 6.5;
+    }
+
+    #goalsLayer[data-goal-skin="pro-padded"] .goal-support,
+    #goalsLayer[data-goal-skin="pro-padded"] .goal-pad {
+      display: inline;
+    }
+
+    #goalsLayer[data-goal-skin="pro-padded"] .goal-support {
+      stroke: var(--goal-color);
+      stroke-width: 3;
+    }
+
+    #goalsLayer[data-goal-skin="pro-padded"] .goal-pad {
+      stroke: #f8fbff;
+      stroke-width: 8;
+    }
+
+    #goalsLayer[data-goal-skin="modern"] .goal-net {
+      fill: url(#goalNetHex);
+    }
+
+    #goalsLayer[data-goal-skin="modern"] .goal-frame {
+      stroke-width: 5.5;
+      filter: drop-shadow(0 0 4px var(--goal-color));
+    }
+
+    #goalsLayer[data-goal-skin="modern"] .goal-support {
+      display: inline;
+      stroke: var(--goal-color);
+      stroke-width: 2.5;
+      stroke-dasharray: 5 3;
+    }
+
+    #goalsLayer[data-goal-skin="minimal"] .goal-net {
+      opacity: .28;
+    }
+
+    #goalsLayer[data-goal-skin="minimal"] .goal-frame {
+      stroke-width: 3;
+    }
   </style>
 </head>
 <body>
@@ -222,6 +295,15 @@
         <option value="night-ice">Ночной лёд</option>
       </select>
     </label>
+    <label class="skin-picker" for="goalSkinSelect">
+      <span>Вид ворот</span>
+      <select id="goalSkinSelect">
+        <option value="classic" selected>Классические</option>
+        <option value="pro-padded">Профессиональные</option>
+        <option value="modern">Современные</option>
+        <option value="minimal">Минималистичные</option>
+      </select>
+    </label>
     <label class="scale-control" for="scale">
       <span>Масштаб</span>
       <input id="scale" type="range" min="25" max="200" step="5" value="75">
@@ -236,6 +318,15 @@
         <pattern id="goalNet" width="5" height="5" patternUnits="userSpaceOnUse">
           <rect width="5" height="5" fill="#eff5fa" fill-opacity=".75"/>
           <path d="M5,0 H0 V5" fill="none" stroke="#7e91a3" stroke-width=".65"/>
+        </pattern>
+        <pattern id="goalNetDense" width="3.5" height="3.5" patternUnits="userSpaceOnUse">
+          <rect width="3.5" height="3.5" fill="#f7fbff" fill-opacity=".9"/>
+          <path d="M3.5,0 H0 V3.5" fill="none" stroke="#66798c" stroke-width=".55"/>
+        </pattern>
+        <pattern id="goalNetHex" width="8" height="7" patternUnits="userSpaceOnUse">
+          <rect width="8" height="7" fill="#e9f7ff" fill-opacity=".58"/>
+          <path d="M2,0 L6,0 L8,3.5 L6,7 L2,7 L0,3.5 Z"
+                fill="none" stroke="#4d7897" stroke-width=".7"/>
         </pattern>
         <!-- После поворота площадки ячейка имеет размер 64 × 60 px. -->
         <pattern id="mathGrid" x="30" y="30" width="60" height="64" patternUnits="userSpaceOnUse">
@@ -382,7 +473,7 @@
           </g>
         </g>
 
-        <g id="goalsLayer" class="layer" aria-label="Красные и синие ворота с вратарскими зонами">
+        <g id="goalsLayer" class="layer" data-goal-skin="classic" aria-label="Красные и синие ворота с вратарскими зонами">
           <!-- Вратарские зоны являются частью слоя ворот. -->
           <path d="M150,300 A50,50 0 0 1 150,400 Z"
                 fill="#56a9c5" fill-opacity="0.72" stroke="#d51f36" stroke-width="3"/>
@@ -390,15 +481,19 @@
                 fill="#56a9c5" fill-opacity="0.72" stroke="#1565c0" stroke-width="3"/>
 
           <!-- Красные ворота № 1. -->
-          <g transform="translate(150 350)">
-            <path d="M0,-50 H-18 Q-30,-50 -30,-38 V38 Q-30,50 -18,50 H0 Z" fill="url(#goalNet)" pointer-events="none"/>
-            <path d="M0,-50 H-18 Q-30,-50 -30,-38 V38 Q-30,50 -18,50 H0" fill="none" stroke="#d32f2f" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+          <g class="goal red-goal" transform="translate(150 350)">
+            <path class="goal-net" d="M0,-50 H-18 Q-30,-50 -30,-38 V38 Q-30,50 -18,50 H0 Z" pointer-events="none"/>
+            <path class="goal-support" d="M-18,-46 V46"/>
+            <path class="goal-pad" d="M-27,-30 V30"/>
+            <path class="goal-frame" d="M0,-50 H-18 Q-30,-50 -30,-38 V38 Q-30,50 -18,50 H0"/>
           </g>
 
           <!-- Синие ворота № 2. -->
-          <g transform="translate(1050 350)">
-            <path d="M0,-50 H18 Q30,-50 30,-38 V38 Q30,50 18,50 H0 Z" fill="url(#goalNet)" pointer-events="none"/>
-            <path d="M0,-50 H18 Q30,-50 30,-38 V38 Q30,50 18,50 H0" fill="none" stroke="#1565c0" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+          <g class="goal blue-goal" transform="translate(1050 350)">
+            <path class="goal-net" d="M0,-50 H18 Q30,-50 30,-38 V38 Q30,50 18,50 H0 Z" pointer-events="none"/>
+            <path class="goal-support" d="M18,-46 V46"/>
+            <path class="goal-pad" d="M27,-30 V30"/>
+            <path class="goal-frame" d="M0,-50 H18 Q30,-50 30,-38 V38 Q30,50 18,50 H0"/>
           </g>
 
           <text class="goal-number red-goal-number" x="175" y="350" transform="rotate(-90 175 350)">1</text>
@@ -468,6 +563,15 @@
 
       skinSelect.addEventListener("change", updateSkin);
       updateSkin();
+
+      var goalSkinSelect = document.getElementById("goalSkinSelect");
+
+      function updateGoalSkin() {
+        document.getElementById("goalsLayer").dataset.goalSkin = goalSkinSelect.value;
+      }
+
+      goalSkinSelect.addEventListener("change", updateGoalSkin);
+      updateGoalSkin();
 
       var board = document.getElementById("board");
       var scale = document.getElementById("scale");
