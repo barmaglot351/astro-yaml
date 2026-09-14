@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Вертикальное хоккейное поле</title>
+  <title>Хоккей 67</title>
   <style>
     * {
       box-sizing: border-box;
@@ -13,834 +13,118 @@
     body {
       margin: 0;
       min-height: 100%;
-      background: #000;
     }
 
     body {
-      display: flex;
+      display: grid;
       min-height: 100vh;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      padding: 10px;
+      place-items: center;
+      overflow: hidden;
+      position: relative;
+      isolation: isolate;
+      background: #030405;
       color: #fff;
       font-family: "Segoe UI", Arial, sans-serif;
     }
 
-    .controls {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 6px;
-    }
-
-    .controls button {
-      min-width: 0;
-      padding: 6px 10px;
-      border: 1px solid #777;
-      border-radius: 999px;
-      background: #171717;
-      color: #aaa;
-      cursor: pointer;
-      font: inherit;
-      font-size: 13px;
-    }
-
-    .controls button:hover {
-      border-color: #fff;
-    }
-
-    .controls button[aria-pressed="true"] {
-      border-color: #fff;
-      background: #fff;
-      color: #000;
-    }
-
-    .controls button:focus-visible {
-      outline: 2px solid #69c9f0;
-      outline-offset: 3px;
-    }
-
-    .scale-control {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      min-width: min(100%, 225px);
-      padding: 5px 9px;
-      border: 1px solid #777;
-      border-radius: 999px;
-      background: #171717;
-      color: #fff;
-      font-size: 13px;
-    }
-
-    .scale-control input {
-      width: 105px;
-      accent-color: #69c9f0;
-      cursor: pointer;
-    }
-
-    .skin-picker {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 5px 8px;
-      border: 1px solid #777;
-      border-radius: 999px;
-      background: #171717;
-      color: #fff;
-      font-size: 13px;
-    }
-
-    .skin-picker select {
-      max-width: 165px;
-      padding: 3px 6px;
-      border: 1px solid #555;
-      border-radius: 8px;
-      background: #050505;
-      color: #fff;
-      cursor: pointer;
-      font: inherit;
-    }
-
-    .scale-value {
-      min-width: 4ch;
-      color: #69c9f0;
-      font-variant-numeric: tabular-nums;
-      text-align: right;
-    }
-
-    .viewport {
-      width: 100%;
-      overflow: auto;
-    }
-
-    .board {
-      width: min(100%, 805px);
-      margin: 0 auto;
-      line-height: 0;
-    }
-
-    #rink {
-      display: block;
-      width: 100%;
-      height: auto;
-      background: #000;
-    }
-
-    .layer[hidden] {
-      display: none;
-    }
-
-    .skin-option {
-      display: none;
-    }
-
-    .skin-option.active {
-      display: inline;
-    }
-
-    #circlesLayer .faceoff-circle {
-      stroke: #d51f36;
-    }
-
-    #circlesLayer .center-circle {
-      stroke: #3586aa;
-    }
-
-    #circlesLayer .faceoff-dot {
-      fill: #d51f36;
-    }
-
-    #circlesLayer .center-dot {
-      fill: #3586aa;
-    }
-
-    #circlesLayer .circle-number {
-      display: none;
-      fill: #126fa4;
-      stroke: #fff;
-      stroke-width: 5;
-      paint-order: stroke;
-      font-family: "Arial Black", Arial, sans-serif;
-      font-size: 42px;
-      font-weight: 900;
-      text-anchor: middle;
-      dominant-baseline: central;
-    }
-
-    #circlesLayer.grid-mode .faceoff-circle,
-    #circlesLayer.grid-mode .center-circle {
-      stroke: #126fa4;
-    }
-
-    #circlesLayer.grid-mode .faceoff-dot,
-    #circlesLayer.grid-mode .center-dot {
-      fill: #126fa4;
-    }
-
-    #circlesLayer.grid-mode .circle-number {
-      display: block;
-    }
-
-    #goalsLayer .goal-number {
-      display: none;
-      stroke: #fff;
-      stroke-width: 3;
-      paint-order: stroke;
-      font-family: "Arial Black", Arial, sans-serif;
-      font-size: 24px;
-      font-weight: 900;
-      text-anchor: middle;
-      dominant-baseline: central;
-      fill: #1565c0;
-    }
-
-    #goalsLayer .red-goal-number {
-      fill: #1565c0;
-    }
-
-    #goalsLayer .blue-goal-number {
-      fill: #1565c0;
-    }
-
-    #goalsLayer.grid-mode .goal-number {
-      display: block;
-    }
-
-    #goalsLayer .red-goal {
-      --goal-color: #d32f2f;
-    }
-
-    #goalsLayer .blue-goal {
-      --goal-color: #1565c0;
-    }
-
-    #goalsLayer .goal-net {
-      fill: url(#goalNet);
-    }
-
-    #goalsLayer .goal-frame {
-      fill: none;
-      stroke: var(--goal-color);
-      stroke-width: 5;
-      stroke-linejoin: round;
-      stroke-linecap: round;
-    }
-
-    #goalsLayer .goal-support,
-    #goalsLayer .goal-pad {
-      display: none;
-      fill: none;
-    }
-
-    #goalsLayer[data-goal-skin="pro-padded"] .goal-net {
-      fill: url(#goalNetDense);
-    }
-
-    #goalsLayer[data-goal-skin="pro-padded"] .goal-frame {
-      stroke-width: 6.5;
-    }
-
-    #goalsLayer[data-goal-skin="pro-padded"] .goal-support,
-    #goalsLayer[data-goal-skin="pro-padded"] .goal-pad {
-      display: inline;
-    }
-
-    #goalsLayer[data-goal-skin="pro-padded"] .goal-support {
-      stroke: var(--goal-color);
-      stroke-width: 3;
-    }
-
-    #goalsLayer[data-goal-skin="pro-padded"] .goal-pad {
-      stroke: #f8fbff;
-      stroke-width: 8;
-    }
-
-    #goalsLayer[data-goal-skin="modern"] .goal-net {
-      fill: url(#goalNetHex);
-    }
-
-    #goalsLayer[data-goal-skin="modern"] .goal-frame {
-      stroke-width: 5.5;
-      filter: drop-shadow(0 0 4px var(--goal-color));
-    }
-
-    #goalsLayer[data-goal-skin="modern"] .goal-support {
-      display: inline;
-      stroke: var(--goal-color);
-      stroke-width: 2.5;
-      stroke-dasharray: 5 3;
-    }
-
-    #goalsLayer[data-goal-skin="minimal"] .goal-net {
-      opacity: .28;
-    }
-
-    #goalsLayer[data-goal-skin="minimal"] .goal-frame {
-      stroke-width: 3;
-    }
-
-    #tracksLayer .track-groove {
-      fill: none;
-      stroke: #101316;
-      stroke-width: 4;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      opacity: .25;
-    }
-
-    #tracksLayer .player-track {
-      fill: none;
-      stroke: #090b0d;
-      stroke-width: 1.5;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      opacity: .34;
-    }
-
-    #tracksLayer .red-tracks {
-      --track-color: #d52d3b;
-    }
-
-    #tracksLayer .blue-tracks {
-      --track-color: #176fbd;
-    }
-
-    #tracksLayer .track-badge {
-      fill: var(--track-color);
-      stroke: #fff;
-      stroke-width: 2;
-      transform: scale(var(--player-scale, 1.25));
-    }
-
-    #tracksLayer .track-number {
-      fill: #fff;
-      font-family: "Arial Black", Arial, sans-serif;
-      font-size: var(--player-font-size, 17.5px);
-      font-weight: 900;
-      text-anchor: middle;
-      dominant-baseline: central;
-      pointer-events: none;
-      user-select: none;
-    }
-
-    #tracksLayer .track-groove,
-    #tracksLayer .player-track {
+    body::before {
+      content: "";
+      position: fixed;
+      z-index: -1;
+      top: -12vh;
+      left: 50%;
+      width: min(72vw, 620px);
+      height: 66vh;
+      transform: translateX(-50%);
+      clip-path: polygon(43% 0, 57% 0, 100% 100%, 0 100%);
+      background: linear-gradient(180deg, rgba(226, 240, 255, .2), rgba(158, 198, 235, .08) 65%, transparent);
+      filter: blur(13px);
       pointer-events: none;
     }
 
-    #tracksLayer .track-player {
-      cursor: grab;
-      pointer-events: all;
-      touch-action: none;
+    body::after {
+      content: "";
+      position: fixed;
+      z-index: -1;
+      top: 50%;
+      left: 50%;
+      width: min(78vw, 520px);
+      height: 150px;
+      transform: translate(-50%, -46%);
+      border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(188, 221, 248, .2), rgba(89, 130, 164, .07) 46%, transparent 72%);
+      filter: blur(7px);
+      pointer-events: none;
     }
 
-    #tracksLayer .track-player.dragging {
-      cursor: grabbing;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .55));
+    .placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+      position: relative;
+      text-align: center;
     }
 
-    #tracksLayer .track-player:hover .track-badge {
-      stroke-width: 3;
+    .puck {
+      position: relative;
+      width: 132px;
+      height: 43px;
+      border: 1px solid #050505;
+      border-radius: 50% / 34%;
+      background:
+        repeating-linear-gradient(180deg, transparent 0 5px, rgba(255, 255, 255, .035) 6px, rgba(0, 0, 0, .3) 7px),
+        linear-gradient(90deg, #070707, #202020 28%, #111 64%, #020202);
+      box-shadow:
+        0 22px 22px -11px rgba(0, 0, 0, .95),
+        0 5px 8px rgba(0, 0, 0, .8),
+        inset 4px 0 8px rgba(255, 255, 255, .06),
+        inset -6px -3px 8px rgba(0, 0, 0, .75);
+    }
+
+    .puck::before {
+      content: "";
+      position: absolute;
+      top: -16px;
+      left: -1px;
+      width: 132px;
+      height: 36px;
+      border: 1px solid #292929;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 34% 31%, rgba(255, 255, 255, .13) 0 1px, transparent 2px),
+        radial-gradient(circle at 67% 62%, rgba(255, 255, 255, .06) 0 1px, transparent 2px),
+        radial-gradient(ellipse at 38% 25%, #333 0%, #191919 34%, #090909 72%, #020202 100%);
+      box-shadow:
+        inset 0 2px 3px rgba(255, 255, 255, .15),
+        inset 0 -5px 9px rgba(0, 0, 0, .75),
+        0 2px 1px rgba(0, 0, 0, .9);
+    }
+
+    .puck::after {
+      content: "";
+      position: absolute;
+      top: -10px;
+      left: 16px;
+      width: 98px;
+      height: 24px;
+      border: 1px solid rgba(255, 255, 255, .055);
+      border-radius: 50%;
+      box-shadow: inset 0 0 8px rgba(0, 0, 0, .75);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 8vw, 4.5rem);
+      letter-spacing: .08em;
+      text-transform: uppercase;
     }
   </style>
 </head>
 <body>
-  <div class="controls" aria-label="Управление слоями">
-    <button type="button" data-layer="boardsLayer" aria-pressed="true">Борта</button>
-    <button type="button" data-layer="skinLayer" aria-pressed="true">Скин поля</button>
-    <button type="button" data-layer="fieldLayer" aria-pressed="true">Поле</button>
-    <button type="button" data-layer="gridLayer" aria-pressed="false">Сетка</button>
-    <button type="button" data-layer="circlesLayer" aria-pressed="true">Круги</button>
-    <button type="button" data-layer="goalsLayer" aria-pressed="true">Ворота и зоны</button>
-    <button type="button" data-layer="tracksLayer" aria-pressed="true">Линии игроков</button>
-    <label class="skin-picker" for="skinSelect">
-      <span>Вид льда</span>
-      <select id="skinSelect">
-        <option value="scratched-blue" selected>Голубой со следами</option>
-        <option value="clean-blue">Чистый голубой</option>
-        <option value="classic-white">Классический белый</option>
-        <option value="night-ice">Ночной лёд</option>
-      </select>
-    </label>
-    <label class="skin-picker" for="goalSkinSelect">
-      <span>Вид ворот</span>
-      <select id="goalSkinSelect">
-        <option value="classic">Классические</option>
-        <option value="pro-padded" selected>Профессиональные</option>
-        <option value="modern">Современные</option>
-        <option value="minimal">Минималистичные</option>
-      </select>
-    </label>
-    <label class="scale-control" for="scale">
-      <span>Масштаб</span>
-      <input id="scale" type="range" min="25" max="200" step="5" value="75">
-      <output id="scaleValue" class="scale-value" for="scale">75%</output>
-    </label>
-    <label class="scale-control" for="playerScale">
-      <span>Игроки</span>
-      <input id="playerScale" type="range" min="75" max="200" step="5" value="125">
-      <output id="playerScaleValue" class="scale-value" for="playerScale">125%</output>
-    </label>
-  </div>
-
-  <main class="viewport">
-    <div class="board" id="board">
-      <svg id="rink" viewBox="0 0 805 1200" role="img" aria-label="Вертикальное хоккейное поле" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <pattern id="goalNet" width="5" height="5" patternUnits="userSpaceOnUse">
-          <rect width="5" height="5" fill="#eff5fa" fill-opacity=".75"/>
-          <path d="M5,0 H0 V5" fill="none" stroke="#7e91a3" stroke-width=".65"/>
-        </pattern>
-        <pattern id="goalNetDense" width="3.5" height="3.5" patternUnits="userSpaceOnUse">
-          <rect width="3.5" height="3.5" fill="#f7fbff" fill-opacity=".9"/>
-          <path d="M3.5,0 H0 V3.5" fill="none" stroke="#66798c" stroke-width=".55"/>
-        </pattern>
-        <pattern id="goalNetHex" width="8" height="7" patternUnits="userSpaceOnUse">
-          <rect width="8" height="7" fill="#e9f7ff" fill-opacity=".58"/>
-          <path d="M2,0 L6,0 L8,3.5 L6,7 L2,7 L0,3.5 Z"
-                fill="none" stroke="#4d7897" stroke-width=".7"/>
-        </pattern>
-        <!-- После поворота площадки ячейка имеет размер 64 × 60 px. -->
-        <pattern id="mathGrid" x="30" y="30" width="60" height="64" patternUnits="userSpaceOnUse">
-          <path d="M60,0 H0 V64" fill="none" stroke="#3ca8d4" stroke-width="1.25" opacity="0.62"/>
-        </pattern>
-        <linearGradient id="scratchedIce" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#eef5ff"/>
-          <stop offset=".48" stop-color="#dce9fb"/>
-          <stop offset="1" stop-color="#cbdcf3"/>
-        </linearGradient>
-        <radialGradient id="cleanBlueIce" cx="50%" cy="45%" r="72%">
-          <stop offset="0" stop-color="#f4faff"/>
-          <stop offset="1" stop-color="#cfe5f8"/>
-        </radialGradient>
-        <radialGradient id="classicWhiteIce" cx="50%" cy="45%" r="72%">
-          <stop offset="0" stop-color="#fff"/>
-          <stop offset="1" stop-color="#e8eef3"/>
-        </radialGradient>
-        <linearGradient id="nightIce" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#5d82a8"/>
-          <stop offset=".5" stop-color="#365d82"/>
-          <stop offset="1" stop-color="#173653"/>
-        </linearGradient>
-        <!-- Редкие естественные следы: прямые торможения, дуги разворотов и неполные круги. -->
-        <g id="naturalSkateMarks" fill="none" stroke="#fff" stroke-linecap="round">
-          <g stroke-width="2.2" opacity=".55">
-            <path d="M135,154 L356,205"/>
-            <path d="M478,116 L665,176"/>
-            <path d="M742,501 L956,447"/>
-            <path d="M842,143 L1028,197"/>
-          </g>
-          <g stroke-width="1.3" opacity=".44">
-            <path d="M151,166 L354,214 M155,174 L350,222"/>
-            <path d="M493,524 L690,465 M498,532 L695,473"/>
-            <path d="M787,282 L946,319 M784,290 L943,327"/>
-          </g>
-          <g stroke-width="1.7" opacity=".48">
-            <path d="M178,470 C108,407 119,303 201,266"/>
-            <path d="M923,167 C1014,206 1026,311 948,371"/>
-            <path d="M404,407 C468,338 548,329 618,382"/>
-            <path d="M610,259 C679,203 757,213 809,276"/>
-          </g>
-          <g stroke-width="1.15" opacity=".38">
-            <path d="M237,126 A112,92 0 0 1 318,292"/>
-            <path d="M262,548 A105,82 0 0 0 336,398"/>
-            <path d="M875,111 A118,88 0 0 0 790,276"/>
-            <path d="M854,536 A109,84 0 0 1 770,384"/>
-            <path d="M521,238 A126,108 0 0 1 684,433"/>
-          </g>
-          <g stroke="#9bb1ca" stroke-width=".8" opacity=".24">
-            <path d="M329,95 L438,137 M701,555 L826,519 M367,546 L452,494"/>
-          </g>
-        </g>
-        <clipPath id="iceClip">
-          <rect x="30" y="30" width="1140" height="640" rx="180"/>
-        </clipPath>
-        <clipPath id="portraitIceClip">
-          <rect x="34.5" y="30" width="736" height="1140" rx="207" ry="180"/>
-        </clipPath>
-      </defs>
-
-      <!-- Геометрия повёрнута на 90 градусов и расширена по горизонтали на 15%. -->
-      <g transform="matrix(0 1 -1.15 0 805 0)">
-        <!-- Слой оформления льда, независимый от линий и игровых объектов. -->
-        <g id="skinLayer" class="layer" clip-path="url(#iceClip)" aria-label="Скин хоккейного поля">
-          <g class="skin-option active" data-skin="scratched-blue">
-            <rect x="30" y="30" width="1140" height="640" rx="180" fill="url(#cleanBlueIce)"/>
-            <use href="#naturalSkateMarks"/>
-            <!-- Мягкая внутренняя тень сохраняет светлый характер чистого голубого льда. -->
-            <rect x="31" y="31" width="1138" height="638" rx="179" fill="none"
-                  stroke="#517da5" stroke-width="22" stroke-opacity=".16"/>
-            <rect x="43" y="43" width="1114" height="614" rx="167" fill="none"
-                  stroke="#fff" stroke-width="2" stroke-opacity=".28"/>
-          </g>
-          <g class="skin-option" data-skin="clean-blue">
-            <rect x="30" y="30" width="1140" height="640" rx="180" fill="url(#cleanBlueIce)"/>
-            <rect x="31" y="31" width="1138" height="638" rx="179" fill="none"
-                  stroke="#517da5" stroke-width="22" stroke-opacity=".18"/>
-          </g>
-          <g class="skin-option" data-skin="classic-white">
-            <rect x="30" y="30" width="1140" height="640" rx="180" fill="url(#classicWhiteIce)"/>
-          </g>
-          <g class="skin-option" data-skin="night-ice">
-            <rect x="30" y="30" width="1140" height="640" rx="180" fill="url(#nightIce)"/>
-            <use href="#naturalSkateMarks" opacity=".36"/>
-            <rect x="31" y="31" width="1138" height="638" rx="179" fill="none"
-                  stroke="#071a2d" stroke-width="30" stroke-opacity=".38"/>
-          </g>
-        </g>
-
-        <g id="fieldLayer" class="layer" clip-path="url(#iceClip)" aria-label="Разметка площадки">
-          <g id="rinkMarkings" fill="none" stroke-width="3.5">
-            <path d="M600,30 V670" stroke="#d51f36" stroke-width="4"/>
-            <path d="M440,30 V670 M760,30 V670" stroke="#3586aa" stroke-width="5"/>
-            <path d="M150,30 V670 M1050,30 V670" stroke="#d51f36" stroke-width="4"/>
-
-            <path d="M517,670 A83,83 0 0 1 683,670" stroke="#d51f36"/>
-          </g>
-        </g>
-
-        <g id="gridLayer" class="layer" hidden clip-path="url(#iceClip)" pointer-events="none" aria-label="Координатная сетка: буквы по оси X, цифры по оси Y">
-          <rect x="30" y="30" width="1140" height="640" fill="url(#mathGrid)"/>
-          <g id="gridLabels"></g>
-        </g>
-
-        <!-- Все окружности и точки площадки собраны в отдельном слое. -->
-        <g id="circlesLayer" class="layer" clip-path="url(#iceClip)" pointer-events="none" aria-label="Пронумерованные круги площадки">
-          <!-- Центральный круг № 3. Эллипсы компенсируют расширение поля и выглядят кругами. -->
-          <ellipse class="center-circle" cx="600" cy="350" rx="87" ry="75.65" fill="none" stroke-width="3.5"/>
-          <ellipse class="center-dot" cx="600" cy="350" rx="7" ry="6.09" stroke="#fff" stroke-width="2"/>
-
-          <g class="faceoff-circle" transform="translate(295 190) scale(1 .869565)" fill="none" stroke-width="3.5">
-            <circle r="87"/>
-            <circle class="faceoff-dot" r="7" stroke="none"/>
-            <path d="M-14,-86 V-97 M14,-86 V-97 M-14,86 V97 M14,86 V97 M-14,-20 V20 M14,-20 V20 M-14,-4 H-38 M-14,4 H-38 M14,-4 H38 M14,4 H38"/>
-          </g>
-          <g class="faceoff-circle" transform="translate(295 510) scale(1 .869565)" fill="none" stroke-width="3.5">
-            <circle r="87"/>
-            <circle class="faceoff-dot" r="7" stroke="none"/>
-            <path d="M-14,-86 V-97 M14,-86 V-97 M-14,86 V97 M14,86 V97 M-14,-20 V20 M14,-20 V20 M-14,-4 H-38 M-14,4 H-38 M14,-4 H38 M14,4 H38"/>
-          </g>
-          <g class="faceoff-circle" transform="translate(905 190) scale(1 .869565)" fill="none" stroke-width="3.5">
-            <circle r="87"/>
-            <circle class="faceoff-dot" r="7" stroke="none"/>
-            <path d="M-14,-86 V-97 M14,-86 V-97 M-14,86 V97 M14,86 V97 M-14,-20 V20 M14,-20 V20 M-14,-4 H-38 M-14,4 H-38 M14,-4 H38 M14,4 H38"/>
-          </g>
-          <g class="faceoff-circle" transform="translate(905 510) scale(1 .869565)" fill="none" stroke-width="3.5">
-            <circle r="87"/>
-            <circle class="faceoff-dot" r="7" stroke="none"/>
-            <path d="M-14,-86 V-97 M14,-86 V-97 M-14,86 V97 M14,86 V97 M-14,-20 V20 M14,-20 V20 M-14,-4 H-38 M-14,4 H-38 M14,-4 H38 M14,4 H38"/>
-          </g>
-
-          <g stroke="none">
-            <ellipse class="faceoff-dot" cx="472" cy="204" rx="7" ry="6.09"/>
-            <ellipse class="faceoff-dot" cx="728" cy="204" rx="7" ry="6.09"/>
-            <ellipse class="faceoff-dot" cx="472" cy="496" rx="7" ry="6.09"/>
-            <ellipse class="faceoff-dot" cx="728" cy="496" rx="7" ry="6.09"/>
-          </g>
-
-          <g aria-label="Номера кругов">
-            <text class="circle-number" x="295" y="510" transform="rotate(-90 295 510)">1</text>
-            <text class="circle-number" x="295" y="190" transform="rotate(-90 295 190)">2</text>
-            <text class="circle-number" x="600" y="350" transform="rotate(-90 600 350)">3</text>
-            <text class="circle-number" x="905" y="510" transform="rotate(-90 905 510)">4</text>
-            <text class="circle-number" x="905" y="190" transform="rotate(-90 905 190)">5</text>
-          </g>
-        </g>
-
-        <g id="goalsLayer" class="layer" data-goal-skin="pro-padded" aria-label="Красные и синие ворота с вратарскими зонами">
-          <!-- Вратарские зоны являются частью слоя ворот. -->
-          <path d="M150,300 A50,50 0 0 1 150,400 Z"
-                fill="#56a9c5" fill-opacity="0.72" stroke="#d51f36" stroke-width="3"/>
-          <path d="M1050,300 A50,50 0 0 0 1050,400 Z"
-                fill="#56a9c5" fill-opacity="0.72" stroke="#1565c0" stroke-width="3"/>
-
-          <!-- Красные ворота № 1. -->
-          <g class="goal red-goal" transform="translate(150 350)">
-            <path class="goal-net" d="M0,-50 H-18 Q-30,-50 -30,-38 V38 Q-30,50 -18,50 H0 Z" pointer-events="none"/>
-            <path class="goal-support" d="M-18,-46 V46"/>
-            <path class="goal-pad" d="M-27,-30 V30"/>
-            <path class="goal-frame" d="M0,-50 H-18 Q-30,-50 -30,-38 V38 Q-30,50 -18,50 H0"/>
-          </g>
-
-          <!-- Синие ворота № 2. -->
-          <g class="goal blue-goal" transform="translate(1050 350)">
-            <path class="goal-net" d="M0,-50 H18 Q30,-50 30,-38 V38 Q30,50 18,50 H0 Z" pointer-events="none"/>
-            <path class="goal-support" d="M18,-46 V46"/>
-            <path class="goal-pad" d="M27,-30 V30"/>
-            <path class="goal-frame" d="M0,-50 H18 Q30,-50 30,-38 V38 Q30,50 18,50 H0"/>
-          </g>
-
-          <text class="goal-number red-goal-number" x="175" y="350" transform="rotate(-90 175 350)">1</text>
-          <text class="goal-number blue-goal-number" x="1025" y="350" transform="rotate(-90 1025 350)">2</text>
-        </g>
-
-        <!-- Серый борт настольного хоккея поверх кромки всех слоёв. -->
-        <g id="boardsLayer" class="layer" pointer-events="none" aria-label="Серые борта площадки">
-          <!-- Контуры смещены наружу: их внутренняя грань совпадает с краем льда. -->
-          <rect x="18" y="18" width="1164" height="664" rx="192" fill="none"
-                stroke="#343a43" stroke-width="24"/>
-          <rect x="21" y="21" width="1158" height="658" rx="189" fill="none"
-                stroke="#777f8a" stroke-width="18"/>
-          <rect x="28.75" y="28.75" width="1142.5" height="642.5" rx="181.25" fill="none"
-                stroke="#b9c0c8" stroke-width="2.5" stroke-opacity=".85"/>
-        </g>
-      </g>
-
-      <!-- Механические направляющие игроков в экранных координатах вертикального поля. -->
-      <g id="tracksLayer" class="layer" clip-path="url(#portraitIceClip)" aria-label="Пронумерованные линии движения игроков">
-        <!-- Красная команда: №1 вратарь, №2–3 защита, №4–6 нападение. -->
-        <g class="red-tracks" aria-label="Линии красной команды">
-          <g aria-label="Красный вратарь, линия 1">
-            <path class="track-groove" d="M350,175 H455"/><path class="player-track" d="M350,175 H455"/>
-          </g>
-          <g aria-label="Красный защитник, линия 2">
-            <path class="track-groove" d="M270,178 V580"/><path class="player-track" d="M270,178 V580"/>
-          </g>
-          <g aria-label="Красный защитник, линия 3">
-            <path class="track-groove" d="M535,178 V580"/><path class="player-track" d="M535,178 V580"/>
-          </g>
-          <g aria-label="Красный нападающий, линия 4">
-            <path class="track-groove" d="M145,620 V1020"/><path class="player-track" d="M145,620 V1020"/>
-          </g>
-          <g aria-label="Красный нападающий, линия 5">
-            <path class="track-groove" d="M402,620 V980"/><path class="player-track" d="M402,620 V980"/>
-          </g>
-          <g aria-label="Красный нападающий, линия 6">
-            <path class="track-groove" d="M660,620 V990 A96.5,135 0 0 1 563.5,1125 H350"/>
-            <path id="redTrack6Path" class="player-track" d="M660,620 V990 A96.5,135 0 0 1 563.5,1125 H350"/>
-          </g>
-
-          <g class="track-player" data-axis="x" data-fixed="175" data-min="366" data-max="439" transform="translate(375 175)" aria-label="Красный вратарь 1"><circle class="track-badge" r="16"/><text class="track-number" y="1">1</text></g>
-          <g class="track-player" data-axis="y" data-fixed="270" data-min="178" data-max="580" transform="translate(270 370)" aria-label="Красный защитник 2"><circle class="track-badge" r="16"/><text class="track-number" y="1">2</text></g>
-          <g class="track-player" data-axis="y" data-fixed="535" data-min="178" data-max="580" transform="translate(535 410)" aria-label="Красный защитник 3"><circle class="track-badge" r="16"/><text class="track-number" y="1">3</text></g>
-          <g class="track-player" data-axis="y" data-fixed="145" data-min="620" data-max="1020" transform="translate(145 810)" aria-label="Красный нападающий 4"><circle class="track-badge" r="16"/><text class="track-number" y="1">4</text></g>
-          <g class="track-player" data-axis="y" data-fixed="402" data-min="620" data-max="980" transform="translate(402 850)" aria-label="Красный нападающий 5"><circle class="track-badge" r="16"/><text class="track-number" y="1">5</text></g>
-          <g class="track-player" data-path="redTrack6Path" transform="translate(660 810)" aria-label="Красный нападающий 6"><circle class="track-badge" r="16"/><text class="track-number" y="1">6</text></g>
-        </g>
-
-        <!-- Синяя команда зеркальна красной. -->
-        <g class="blue-tracks" aria-label="Линии синей команды">
-          <g aria-label="Синий вратарь, линия 1">
-            <path class="track-groove" d="M350,1025 H455"/><path class="player-track" d="M350,1025 H455"/>
-          </g>
-          <g aria-label="Синий защитник, линия 2">
-            <path class="track-groove" d="M270,1022 V620"/><path class="player-track" d="M270,1022 V620"/>
-          </g>
-          <g aria-label="Синий защитник, линия 3">
-            <path class="track-groove" d="M535,1022 V620"/><path class="player-track" d="M535,1022 V620"/>
-          </g>
-          <g aria-label="Синий нападающий, линия 4">
-            <path class="track-groove" d="M145,580 V210 A96.5,135 0 0 1 241.5,75 H455"/>
-            <path id="blueTrack4Path" class="player-track" d="M145,580 V210 A96.5,135 0 0 1 241.5,75 H455"/>
-          </g>
-          <g aria-label="Синий нападающий, линия 5">
-            <path class="track-groove" d="M402,580 V220"/><path class="player-track" d="M402,580 V220"/>
-          </g>
-          <g aria-label="Синий нападающий, линия 6">
-            <path class="track-groove" d="M660,580 V180"/><path class="player-track" d="M660,580 V180"/>
-          </g>
-
-          <g class="track-player" data-axis="x" data-fixed="1025" data-min="366" data-max="439" transform="translate(430 1025)" aria-label="Синий вратарь 1"><circle class="track-badge" r="16"/><text class="track-number" y="1">1</text></g>
-          <g class="track-player" data-axis="y" data-fixed="270" data-min="620" data-max="1022" transform="translate(270 830)" aria-label="Синий защитник 2"><circle class="track-badge" r="16"/><text class="track-number" y="1">2</text></g>
-          <g class="track-player" data-axis="y" data-fixed="535" data-min="620" data-max="1022" transform="translate(535 790)" aria-label="Синий защитник 3"><circle class="track-badge" r="16"/><text class="track-number" y="1">3</text></g>
-          <g class="track-player" data-path="blueTrack4Path" transform="translate(145 390)" aria-label="Синий нападающий 4"><circle class="track-badge" r="16"/><text class="track-number" y="1">4</text></g>
-          <g class="track-player" data-axis="y" data-fixed="402" data-min="220" data-max="580" transform="translate(402 350)" aria-label="Синий нападающий 5"><circle class="track-badge" r="16"/><text class="track-number" y="1">5</text></g>
-          <g class="track-player" data-axis="y" data-fixed="660" data-min="180" data-max="580" transform="translate(660 390)" aria-label="Синий нападающий 6"><circle class="track-badge" r="16"/><text class="track-number" y="1">6</text></g>
-        </g>
-      </g>
-      </svg>
-    </div>
+  <main class="placeholder">
+    <div class="puck" aria-hidden="true"></div>
+    <h1>Хоккей 67</h1>
   </main>
-
-  <script>
-    (function () {
-      var namespace = "http://www.w3.org/2000/svg";
-      var labels = document.getElementById("gridLabels");
-
-      function addLabel(value, x, y) {
-        var label = document.createElementNS(namespace, "text");
-        label.setAttribute("x", x);
-        label.setAttribute("y", y);
-        label.setAttribute("transform", "rotate(-90 " + x + " " + y + ")");
-        label.setAttribute("text-anchor", "middle");
-        label.setAttribute("dominant-baseline", "middle");
-        label.setAttribute("fill", "#176f98");
-        label.setAttribute("stroke", "#fff");
-        label.setAttribute("stroke-width", "2.5");
-        label.setAttribute("paint-order", "stroke");
-        label.setAttribute("font-size", "11");
-        label.setAttribute("font-family", "Segoe UI, Arial, sans-serif");
-        label.setAttribute("font-weight", "700");
-        label.setAttribute("opacity", "0.7");
-        label.textContent = value;
-        labels.appendChild(label);
-      }
-
-      // Экранная ось X идёт слева направо буквами A–J, ось Y — сверху вниз числами 1–19.
-      // Координаты пересчитаны в исходную систему до общего поворота площадки на 90°.
-      for (var row = 0; row < 19; row += 1) {
-        for (var column = 0; column < 10; column += 1) {
-          var letter = String.fromCharCode(65 + column);
-          var originalX = 60 + row * 60;
-          var originalY = 638 - column * 64;
-          addLabel(letter + (row + 1), originalX, originalY);
-        }
-      }
-
-      document.querySelectorAll("[data-layer]").forEach(function (button) {
-        button.addEventListener("click", function () {
-          var layer = document.getElementById(button.dataset.layer);
-          var willBeVisible = button.getAttribute("aria-pressed") !== "true";
-          layer.toggleAttribute("hidden", !willBeVisible);
-          button.setAttribute("aria-pressed", String(willBeVisible));
-
-          if (button.dataset.layer === "gridLayer") {
-            document.getElementById("circlesLayer").classList.toggle("grid-mode", willBeVisible);
-            document.getElementById("goalsLayer").classList.toggle("grid-mode", willBeVisible);
-          }
-        });
-      });
-
-      var skinSelect = document.getElementById("skinSelect");
-
-      function updateSkin() {
-        document.querySelectorAll(".skin-option").forEach(function (skin) {
-          skin.classList.toggle("active", skin.dataset.skin === skinSelect.value);
-        });
-      }
-
-      skinSelect.addEventListener("change", updateSkin);
-      updateSkin();
-
-      var goalSkinSelect = document.getElementById("goalSkinSelect");
-
-      function updateGoalSkin() {
-        document.getElementById("goalsLayer").dataset.goalSkin = goalSkinSelect.value;
-      }
-
-      goalSkinSelect.addEventListener("change", updateGoalSkin);
-      updateGoalSkin();
-
-      var rink = document.getElementById("rink");
-      var draggedTrackPlayer = null;
-      var draggedPointerId = null;
-
-      function pointerPosition(event) {
-        var point = rink.createSVGPoint();
-        point.x = event.clientX;
-        point.y = event.clientY;
-        return point.matrixTransform(rink.getScreenCTM().inverse());
-      }
-
-      function closestPointOnPath(path, target) {
-        var pathLength = path.getTotalLength();
-        var samples = Math.max(24, Math.ceil(pathLength / 12));
-        var sampleStep = pathLength / samples;
-        var bestLength = 0;
-        var bestDistance = Infinity;
-
-        function inspect(length) {
-          var boundedLength = Math.max(0, Math.min(pathLength, length));
-          var candidate = path.getPointAtLength(boundedLength);
-          var dx = candidate.x - target.x;
-          var dy = candidate.y - target.y;
-          var distance = dx * dx + dy * dy;
-          if (distance < bestDistance) {
-            bestDistance = distance;
-            bestLength = boundedLength;
-          }
-        }
-
-        for (var sample = 0; sample <= samples; sample += 1) inspect(sample * sampleStep);
-        for (var pass = 0; pass < 7; pass += 1) {
-          sampleStep /= 2;
-          var center = bestLength;
-          inspect(center - sampleStep);
-          inspect(center + sampleStep);
-        }
-
-        return path.getPointAtLength(bestLength);
-      }
-
-      function moveTrackPlayer(player, point) {
-        if (player.dataset.path) {
-          var path = document.getElementById(player.dataset.path);
-          var constrainedPoint = closestPointOnPath(path, point);
-          player.setAttribute("transform", "translate(" + constrainedPoint.x + " " + constrainedPoint.y + ")");
-          return;
-        }
-
-        var axis = player.dataset.axis;
-        var fixed = Number(player.dataset.fixed);
-        var minimum = Number(player.dataset.min);
-        var maximum = Number(player.dataset.max);
-        var movingCoordinate = axis === "x" ? point.x : point.y;
-        var constrained = Math.max(minimum, Math.min(maximum, movingCoordinate));
-        var x = axis === "x" ? constrained : fixed;
-        var y = axis === "y" ? constrained : fixed;
-        player.setAttribute("transform", "translate(" + x + " " + y + ")");
-      }
-
-      document.querySelectorAll(".track-player").forEach(function (player) {
-        player.addEventListener("pointerdown", function (event) {
-          event.preventDefault();
-          draggedTrackPlayer = player;
-          draggedPointerId = event.pointerId;
-          player.classList.add("dragging");
-          player.setPointerCapture(event.pointerId);
-          moveTrackPlayer(player, pointerPosition(event));
-        });
-
-        player.addEventListener("pointermove", function (event) {
-          if (draggedTrackPlayer !== player || draggedPointerId !== event.pointerId) return;
-          event.preventDefault();
-          moveTrackPlayer(player, pointerPosition(event));
-        });
-
-        function stopDragging(event) {
-          if (draggedTrackPlayer !== player || draggedPointerId !== event.pointerId) return;
-          player.classList.remove("dragging");
-          if (player.hasPointerCapture(event.pointerId)) player.releasePointerCapture(event.pointerId);
-          draggedTrackPlayer = null;
-          draggedPointerId = null;
-        }
-
-        player.addEventListener("pointerup", stopDragging);
-        player.addEventListener("pointercancel", stopDragging);
-      });
-
-      var tracksLayer = document.getElementById("tracksLayer");
-      var playerScale = document.getElementById("playerScale");
-      var playerScaleValue = document.getElementById("playerScaleValue");
-
-      function updatePlayerScale() {
-        var percent = Number(playerScale.value);
-        tracksLayer.style.setProperty("--player-scale", percent / 100);
-        tracksLayer.style.setProperty("--player-font-size", 14 * percent / 100 + "px");
-        playerScaleValue.value = percent + "%";
-      }
-
-      playerScale.addEventListener("input", updatePlayerScale);
-      updatePlayerScale();
-
-      var board = document.getElementById("board");
-      var scale = document.getElementById("scale");
-      var scaleValue = document.getElementById("scaleValue");
-
-      function updateScale() {
-        var percent = Number(scale.value);
-        var availableWidth = Math.max(1, window.innerWidth - 20);
-        var fittedWidth = Math.min(805, availableWidth);
-        board.style.width = fittedWidth * percent / 100 + "px";
-        scaleValue.value = percent + "%";
-      }
-
-      scale.addEventListener("input", updateScale);
-      window.addEventListener("resize", updateScale);
-      updateScale();
-    })();
-  </script>
 </body>
 </html>
