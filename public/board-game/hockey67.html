@@ -78,6 +78,28 @@
       cursor: pointer;
     }
 
+    .skin-picker {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 12px;
+      border: 1px solid #777;
+      border-radius: 999px;
+      background: #171717;
+      color: #fff;
+    }
+
+    .skin-picker select {
+      max-width: 205px;
+      padding: 5px 8px;
+      border: 1px solid #555;
+      border-radius: 8px;
+      background: #050505;
+      color: #fff;
+      cursor: pointer;
+      font: inherit;
+    }
+
     .scale-value {
       min-width: 4ch;
       color: #69c9f0;
@@ -105,6 +127,14 @@
 
     .layer[hidden] {
       display: none;
+    }
+
+    .skin-option {
+      display: none;
+    }
+
+    .skin-option.active {
+      display: inline;
     }
 
     #circlesLayer .faceoff-circle {
@@ -178,10 +208,20 @@
 </head>
 <body>
   <div class="controls" aria-label="Управление слоями">
+    <button type="button" data-layer="skinLayer" aria-pressed="true">Скин поля</button>
     <button type="button" data-layer="fieldLayer" aria-pressed="true">Поле</button>
     <button type="button" data-layer="gridLayer" aria-pressed="false">Сетка</button>
     <button type="button" data-layer="circlesLayer" aria-pressed="true">Круги</button>
     <button type="button" data-layer="goalsLayer" aria-pressed="true">Ворота и зоны</button>
+    <label class="skin-picker" for="skinSelect">
+      <span>Вид льда</span>
+      <select id="skinSelect">
+        <option value="scratched-blue" selected>Голубой со следами</option>
+        <option value="clean-blue">Чистый голубой</option>
+        <option value="classic-white">Классический белый</option>
+        <option value="night-ice">Ночной лёд</option>
+      </select>
+    </label>
     <label class="scale-control" for="scale">
       <span>Масштаб</span>
       <input id="scale" type="range" min="25" max="200" step="5" value="75">
@@ -201,6 +241,37 @@
         <pattern id="mathGrid" x="30" y="30" width="60" height="64" patternUnits="userSpaceOnUse">
           <path d="M60,0 H0 V64" fill="none" stroke="#3ca8d4" stroke-width="1.25" opacity="0.62"/>
         </pattern>
+        <linearGradient id="scratchedIce" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#eef5ff"/>
+          <stop offset=".48" stop-color="#dce9fb"/>
+          <stop offset="1" stop-color="#cbdcf3"/>
+        </linearGradient>
+        <radialGradient id="cleanBlueIce" cx="50%" cy="45%" r="72%">
+          <stop offset="0" stop-color="#f4faff"/>
+          <stop offset="1" stop-color="#cfe5f8"/>
+        </radialGradient>
+        <radialGradient id="classicWhiteIce" cx="50%" cy="45%" r="72%">
+          <stop offset="0" stop-color="#fff"/>
+          <stop offset="1" stop-color="#e8eef3"/>
+        </radialGradient>
+        <linearGradient id="nightIce" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#5d82a8"/>
+          <stop offset=".5" stop-color="#365d82"/>
+          <stop offset="1" stop-color="#173653"/>
+        </linearGradient>
+        <pattern id="skateMarks" width="260" height="190" patternUnits="userSpaceOnUse">
+          <g fill="none" stroke="#fff" stroke-linecap="round">
+            <path d="M-25,36 L205,158 M18,-14 L244,124 M92,-20 L277,76 M-35,151 L179,6"
+                  stroke-width="2.3" opacity=".62"/>
+            <path d="M12,181 L232,43 M-18,92 L165,178 M123,198 L274,109 M54,6 L251,174"
+                  stroke-width="1.35" opacity=".48"/>
+            <path d="M6,54 Q74,83 148,43 T284,55 M-24,126 Q58,92 136,139 T279,121"
+                  stroke-width="1" opacity=".35"/>
+          </g>
+          <g fill="none" stroke="#8ca7c7" stroke-width=".8" opacity=".22">
+            <path d="M0,18 L255,168 M31,190 L224,-8 M-30,73 L194,187"/>
+          </g>
+        </pattern>
         <clipPath id="iceClip">
           <rect x="30" y="30" width="1140" height="640" rx="180"/>
         </clipPath>
@@ -208,8 +279,34 @@
 
       <!-- Геометрия повёрнута на 90 градусов и расширена по горизонтали на 15%. -->
       <g transform="matrix(0 1 -1.15 0 805 0)">
-        <g id="fieldLayer" class="layer" clip-path="url(#iceClip)" aria-label="Лёд и разметка площадки">
-          <rect x="30" y="30" width="1140" height="640" rx="180" fill="#fff"/>
+        <!-- Слой оформления льда, независимый от линий и игровых объектов. -->
+        <g id="skinLayer" class="layer" clip-path="url(#iceClip)" aria-label="Скин хоккейного поля">
+          <g class="skin-option active" data-skin="scratched-blue">
+            <rect x="30" y="30" width="1140" height="640" rx="180" fill="url(#scratchedIce)"/>
+            <rect x="30" y="30" width="1140" height="640" rx="180" fill="url(#skateMarks)"/>
+            <!-- Широкий полупрозрачный контур имитирует внутреннюю тень от бортов. -->
+            <rect x="31" y="31" width="1138" height="638" rx="179" fill="none"
+                  stroke="#284873" stroke-width="36" stroke-opacity=".3"/>
+            <rect x="50" y="50" width="1100" height="600" rx="160" fill="none"
+                  stroke="#fff" stroke-width="3" stroke-opacity=".35"/>
+          </g>
+          <g class="skin-option" data-skin="clean-blue">
+            <rect x="30" y="30" width="1140" height="640" rx="180" fill="url(#cleanBlueIce)"/>
+            <rect x="31" y="31" width="1138" height="638" rx="179" fill="none"
+                  stroke="#517da5" stroke-width="22" stroke-opacity=".18"/>
+          </g>
+          <g class="skin-option" data-skin="classic-white">
+            <rect x="30" y="30" width="1140" height="640" rx="180" fill="url(#classicWhiteIce)"/>
+          </g>
+          <g class="skin-option" data-skin="night-ice">
+            <rect x="30" y="30" width="1140" height="640" rx="180" fill="url(#nightIce)"/>
+            <rect x="30" y="30" width="1140" height="640" rx="180" fill="url(#skateMarks)" opacity=".22"/>
+            <rect x="31" y="31" width="1138" height="638" rx="179" fill="none"
+                  stroke="#071a2d" stroke-width="30" stroke-opacity=".38"/>
+          </g>
+        </g>
+
+        <g id="fieldLayer" class="layer" clip-path="url(#iceClip)" aria-label="Разметка площадки">
           <g id="rinkMarkings" fill="none" stroke-width="3.5">
             <rect x="32" y="32" width="1136" height="636" rx="178" stroke="#59636d" stroke-width="5"/>
             <path d="M600,30 V670" stroke="#d51f36" stroke-width="4"/>
@@ -343,6 +440,17 @@
           }
         });
       });
+
+      var skinSelect = document.getElementById("skinSelect");
+
+      function updateSkin() {
+        document.querySelectorAll(".skin-option").forEach(function (skin) {
+          skin.classList.toggle("active", skin.dataset.skin === skinSelect.value);
+        });
+      }
+
+      skinSelect.addEventListener("change", updateSkin);
+      updateSkin();
 
       var board = document.getElementById("board");
       var scale = document.getElementById("scale");
